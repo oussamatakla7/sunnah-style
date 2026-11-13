@@ -15,17 +15,32 @@ h1, .section-title h2, dialog h2 {
   font-weight: 600;
   letter-spacing: normal;
 }
-h1 { font-size: clamp(3.35rem, 6.5vw, 6.5rem); line-height: 1.06; margin-bottom: 1.25rem; }
+h1 { font-size: clamp(3.1rem, 5vw, 5.4rem); line-height: 1.06; margin-bottom: 1.25rem; }
 .kicker { font: 500 .72rem var(--body); }
 .announcement { padding: .55rem; }
 .bar { min-height: 78px; background: var(--paper); }
 .bar nav { font-size: .95rem; }
 .wordmark { font-family: var(--latin); font-size: 1.65rem; }
 .wordmark small { font-family: var(--body); }
-.hero { grid-template-columns: .85fr 1.15fr; min-height: clamp(460px, 43vw, 620px); }
-.hero-copy { padding-block: clamp(3rem, 7vw, 6rem); }
-.campaign { background-position: center 43%; }
-.intro { font-size: clamp(1rem, 1.4vw, 1.2rem); }
+.hero {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(300px, 43%) 1fr;
+  grid-template-areas: "space copy";
+  min-height: clamp(470px, 47vw, 680px);
+  color: var(--green);
+  background: #f0e6d5;
+}
+.hero-copy { grid-area: copy; z-index: 1; padding: 3.2rem clamp(1.5rem, 6vw, 6.5rem) 3.2rem 1.25rem; }
+.campaign {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(90deg, #f5ecdefa 0%, #f5ecdef2 18%, #f5ecdebf 33%, #f5ecde00 58%), url("assets/hero.jpg") center 45% / cover no-repeat, #f0e6d5;
+}
+.hero .gold { background: var(--green); color: #f7dfad; }
+.intro { color: #364f43; font-size: clamp(1rem, 1.4vw, 1.2rem); }
 .button { font-weight: 600; }
 .collection { padding-top: clamp(2.8rem, 6vw, 5.5rem); }
 .section-title { margin-bottom: 1.55rem; text-align: start; }
@@ -49,13 +64,12 @@ h1 { font-size: clamp(3.35rem, 6.5vw, 6.5rem); line-height: 1.06; margin-bottom:
 @media(max-width:650px) {
   .bar { min-height: 62px; }
   .wordmark { font-size: 1.22rem; }
-  .hero { grid-template-columns: 1fr; }
-  .hero-copy { padding: 2.55rem 1.35rem; }
+  .hero { grid-template-columns: 1fr; grid-template-areas: "image" "copy"; min-height: 0; }
+  .hero-copy { padding: 2rem 1.35rem 2.35rem; text-align: center; }
   h1 { font-size: clamp(3.2rem, 11vw, 4.6rem); }
-  .campaign { aspect-ratio: 1.4; }
+  .campaign { position: static; grid-area: image; z-index: auto; aspect-ratio: 1.45; background: url("assets/hero.jpg") center 44% / cover no-repeat #f0e6d5; }
   .filters { gap: .65rem; }
   .filters button { font-size: .83rem; padding-inline: .35rem; }
   .products { gap: 1.4rem .7rem; }
   .product-info h3 { font-size: 1rem; }
 }
-
