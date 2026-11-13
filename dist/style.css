@@ -97,3 +97,17 @@ h1 { font-size: clamp(3.1rem, 5vw, 5.4rem); line-height: 1.06; margin-bottom: 1.
 .category-links img { aspect-ratio: 3/5; object-position: center top; }
 .hero-order-note { margin: .75rem 0 0; max-width: 28rem; color: #364f43; font-size: .88rem; line-height: 1.6; } @media(max-width:650px) { .hero-order-note { margin-inline: auto; } }
 .item-price { margin: .15rem 0 .55rem; color: var(--green); font-weight: 600; } .item-price small { font-weight: 400; color: var(--muted); letter-spacing: 0; } .cart-total { display: flex; justify-content: space-between; font-weight: 700; }
+.hero { grid-template-columns: 57% 43%; min-height: clamp(410px, 42vw, 650px); background: #f2ece2; }
+html[dir="ltr"] .hero { grid-template-columns: 43% 57%; }
+.hero-copy, html[dir="ltr"] .hero-copy { padding: 2.5rem clamp(1.5rem, 5vw, 5rem); }
+.hero h1 { font-size: clamp(2.75rem, 4.5vw, 5rem); font-weight: 500; margin: 0 0 .8rem; }
+.hero .intro { margin: 0 0 1.4rem; max-width: 26rem; }
+.campaign { background: linear-gradient(90deg, #f2ece2 0%, #f2ece2e0 28%, #f2ece200 49%), url("assets/hero-collection.jpg") center center / cover no-repeat #f2ece2; }
+html[dir="ltr"] .campaign { transform: scaleX(-1); }
+@media(max-width:650px) {
+ .hero, html[dir="ltr"] .hero { grid-template-columns: 1fr; min-height: 0; }
+ .campaign { background: url("assets/hero-collection.jpg") right center / cover no-repeat #f2ece2; aspect-ratio: 1.48; }
+ html[dir="ltr"] .campaign { transform: none; }
+ .hero-copy, html[dir="ltr"] .hero-copy { padding: 1.7rem 1.25rem 2rem; }
+ .hero .intro { margin-inline: auto; }
+}
