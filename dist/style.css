@@ -112,3 +112,40 @@ html[dir="ltr"] .campaign { transform: scaleX(-1); }
  .hero .intro { margin-inline: auto; }
 }
 .product-art { aspect-ratio: 1; } .product-art img { display: block; } .illustrative-photo { margin: .3rem .1rem .1rem; color: var(--muted); font-size: .75rem; } .detail-photo { display: block; width: min(100%, 220px); height: auto; }
+@media (max-width: 850px) {
+  .bar { grid-template-columns: minmax(0, 1fr) auto; gap: 0; padding: 0 1rem; min-height: auto; }
+  .bar .wordmark { font-size: 1.15rem; letter-spacing: .1em; margin-block: 1rem; }
+  .bar .wordmark small { font-size: .49rem; }
+  .header-actions { gap: .25rem; }
+  .header-actions .icon-action { width: 40px; height: 44px; }
+  .header-actions .language { font-size: .78rem; padding: .55rem .3rem; }
+  .cart-button #count { inset-inline-end: -1px; top: 1px; }
+  .bar nav { justify-content: stretch; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 0; width: 100%; border-top: 1px solid var(--line); padding: 0; }
+  .bar nav a { display: grid; place-items: center; text-align: center; min-height: 44px; font-size: .85rem; border-bottom: 2px solid transparent; }
+  .bar nav a[aria-current="page"] { border-bottom-color: var(--green); text-decoration: none; font-weight: 600; }
+  .header-search-form { inset-inline: 1rem; width: auto; }
+}
+@media (max-width: 650px) {
+  .hero, html[dir="ltr"] .hero { grid-template-areas: "image" "copy"; }
+  .campaign { aspect-ratio: 1.45; background-position: right top; }
+  .hero-copy, html[dir="ltr"] .hero-copy { padding: 1.45rem 1rem 1.75rem; }
+  .hero h1 { font-size: clamp(2.2rem, 9vw, 3.15rem); }
+  .hero .intro { font-size: .94rem; margin-bottom: 1rem; }
+  .home-sections, .collection, .info-page { padding-inline: 1rem; padding-block: 2rem; }
+  .home-sections h2 { font-size: 1.85rem; margin-bottom: .9rem; }
+  .collection .section-title h1 { font-size: 2.4rem; }
+  .filters [role="group"] { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .25rem .5rem; }
+  .filters button { min-height: 40px; }
+  .product-info button { min-height: 44px; }
+  .product-info h3 { overflow-wrap: anywhere; }
+  .product-art img { object-fit: contain; }
+  dialog { width: min(calc(100% - 1.5rem), 510px); padding: 1.15rem; max-height: calc(100dvh - 2rem); }
+  .quantity button { width: 2.35rem; height: 2.55rem; }
+  #checkout .button, #add-form .button { width: 100%; }
+  footer { gap: 1rem; padding: 1.5rem 1rem; }
+}
+@media (max-width: 350px) {
+  .bar { padding-inline: .65rem; }
+  .bar .wordmark { font-size: 1rem; }
+  .header-actions .icon-action { width: 34px; }
+}
