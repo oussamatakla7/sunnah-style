@@ -3,7 +3,7 @@ const pagePaths = new Map([['/', 'index'], ['/index', 'index'], ['/index.html', 
 const customPagePath = /^\/pages\/[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const isCustomPage = key => key.length <= 67 && customPagePath.test(key);
 const stateKey = 'store-state.json';
-const adminPaths = new Set(['/editor', '/editor.html', '/editor.js', '/api/admin/state', '/api/admin/users']);
+const adminPaths = new Set(['/editor', '/editor.html', '/editor.js', '/api/admin/state', '/api/admin/users', '/api/admin/orders']);
 const noCache = {'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff'};
 const json = (value, status = 200) => Response.json(value, {status, headers: noCache});
 const empty = {revision: 0, draft: {pages: {}, products: null}, live: {pages: {}, products: null}};
@@ -194,10 +194,74 @@ async function login(request, env) {
 }
 
 
+async function createOrder(request, bucket) {
+  if (!sameOrigin(request) || request.headers.get('content-type') !== 'application/json') return json({error:'origin'},403);
+  const reader = request.body?.getReader();
+  if (!reader) return json({error:'invalid'},400);
+  const decoder = new TextDecoder();
+  let body = '';
+  let bytes = 0;
+  for (;;) {
+    const {done,value} = await reader.read();
+    if (done) break;
+    bytes += value.byteLength;
+    if (bytes > 16384) { await reader.cancel(); return json({error:'limit'},413); }
+    body += decoder.decode(value,{stream:true});
+  }
+  let input;
+  try { input = JSON.parse(body + decoder.decode()); }
+  catch { return json({error:'invalid'},400); }
+  const limits = {customer:100,phone:25,area:100,address:250,notes:250};
+  const delivery = {};
+  for (const [field, limit] of Object.entries(limits)) {
+    const value = input?.delivery?.[field];
+    if (typeof value !== 'string' || value.length > limit || (!value.trim() && field !== 'notes')) return json({error:'invalid'},400);
+    delivery[field] = value.trim().replace(/\s+/g,' ');
+  }
+  if (delivery.phone.replace(/[^0-9٠-٩۰-۹]/g,'').length < 7 ||
+      !Array.isArray(input.items) || !input.items.length || input.items.length > 50) return json({error:'invalid'},400);
+  const {data} = await getState(bucket);
+  const catalog = data.live.products ?? defaultCatalog;
+  const items = [];
+  const quantities = new Map();
+  let cents = 0;
+  for (const item of input.items) {
+    const product = catalog.find(product => product.sku === item?.sku);
+    const variant = Number.isInteger(item?.color) && product?.variants[item.color];
+    if (!variant || typeof item.size !== 'string' || !(variant[1] || ['يُحدّد عبر واتساب']).map(String).includes(item.size) ||
+        !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 99) return json({error:'invalid_item'},400);
+    const quantity = (quantities.get(product.sku) || 0) + item.quantity;
+    if (product.quantity != null && quantity > product.quantity) return json({error:'stock'},409);
+    quantities.set(product.sku,quantity);
+    const unitCents = Math.round(product.price * 100);
+    cents += unitCents * item.quantity;
+    items.push({sku:product.sku,name:product.name,color:variant[0][0],size:item.size,quantity:item.quantity,unitCents});
+  }
+  const now = Date.now();
+  const id = crypto.randomUUID();
+  const order = {id,createdAt:new Date(now).toISOString(),delivery,items,cents};
+  const key = 'orders/' + String(9999999999999 - now).padStart(13,'0') + '-' + id;
+  await bucket.put(key,JSON.stringify(order));
+  return json({id,items,cents},201);
+}
+
+async function listOrders(request, bucket, current) {
+  if (current.role !== 'admin') return json({error:'forbidden'},403);
+  if (request.method !== 'GET') return json({error:'method'},405);
+  const cursor = new URL(request.url).searchParams.get('cursor');
+  const result = await bucket.list({prefix:'orders/',limit:20,...(cursor ? {cursor} : {})});
+  const orders = await Promise.all(result.objects.map(async entry => (await bucket.get(entry.key))?.json()));
+  return json({orders:orders.filter(Boolean),cursor:result.truncated ? result.cursor : null});
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const path = url.pathname.replace(/\/+$/, '') || '/';
+    if (path === '/api/orders') {
+      if (request.method !== 'POST') return json({error:'method'},405);
+      return createOrder(request,env.BUCKET);
+    }
     if (path === loginPath) {
       if (request.method === 'GET') return await session(request, env) ? redirect('/editor') : loginPage();
       if (request.method === 'POST') return login(request, env);
@@ -218,6 +282,7 @@ export default {
         return json({error:'login'},401);
       }
       if (path === '/api/admin/users') return manageUsers(request,env,current);
+      if (path === '/api/admin/orders') return listOrders(request,env.BUCKET,current);
       if (path === '/api/admin/state' && request.method === 'PUT') return updateState(request, env.BUCKET, current.role);
       if (path === '/api/admin/state' && request.method === 'GET') {
         const {data} = await getState(env.BUCKET);

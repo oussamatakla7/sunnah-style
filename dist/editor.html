@@ -65,6 +65,12 @@ tbody tr:nth-child(odd){background:#f8fafb}.table-photo{width:42px;height:42px;o
 <nav class="side" aria-label="إدارة المتجر"><button type="button" data-tab="pages" aria-current="page">▤ الصفحات</button><button type="button" data-tab="products">▦ المنتجات</button><button type="button" data-tab="layout">▤ الهيدر والفوتر</button></nav>
 <main>
 <p id="status" role="status"></p>
+<section id="orders" hidden>
+  <div class="row spread view-title"><h1>الطلبات</h1><button id="refresh-orders">تحديث</button></div>
+  <p>بتظهر هون الطلبات المحفوظة قبل إرسال رسالة واتساب.</p>
+  <div id="order-list" class="stack"></div>
+  <button id="more-orders" hidden>عرض طلبات أقدم</button>
+</section>
 <section id="users" hidden>
   <div class="row spread view-title"><h1>المستخدمون</h1><button id="new-user" class="primary">إضافة مستخدم</button></div>
   <form id="user-form" class="panel add-page" hidden>

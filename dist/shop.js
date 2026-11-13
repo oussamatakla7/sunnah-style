@@ -119,10 +119,10 @@ function deliveryFields() {
     <label>المدينة أو المنطقة<input name="area" autocomplete="address-level2" maxlength="100" required></label>
     <label>العنوان بالتفصيل<input name="address" autocomplete="street-address" maxlength="250" required></label>
     <label>ملاحظات للتوصيل (اختياري)<textarea name="notes" maxlength="250" rows="2"></textarea></label>
-  </fieldset>`;
+  </fieldset><small>منستخدم هالمعلومات لتجهيز الطلب والتوصيل، وبتظهر برسالة واتساب.</small>`;
 }
 
-function sendWhatsAppOrder(form, orderLines) {
+async function sendWhatsAppOrder(form, items) {
   const fields = new FormData(form);
   const value = name => String(fields.get(name) || '').trim().replace(/\s+/g, ' ');
   const phone = value('phone');
@@ -131,13 +131,42 @@ function sendWhatsAppOrder(form, orderLines) {
     form.querySelector('[role=status]').textContent = 'تأكّدي من الاسم ورقم الهاتف والمنطقة والعنوان.';
     return;
   }
-  form.querySelector('[role=status]').textContent = '';
-  const delivery = ['معلومات التوصيل', 'الاسم: ' + value('customer'), 'الهاتف: ' + phone,
-    'المنطقة: ' + value('area'), 'العنوان: ' + value('address')];
-  if (value('notes')) delivery.push('ملاحظات: ' + value('notes'));
-  const message = ['السلام عليكم فريق سنّة ستايل، حابّة أطلب هيدا الأوردر.',
-    '', 'تفاصيل الطلب', ...orderLines, '', ...delivery].join('\n');
-  window.open(whatsapp + '?text=' + encodeURIComponent(message), '_blank', 'noopener');
+  const feedback = form.querySelector('[role=status]');
+  const submit = form.querySelector('button[type=submit]');
+  if (submit.disabled || submit.hidden) return;
+  submit.disabled = true;
+  feedback.textContent = 'عم نحفظ طلبكِ…';
+  try {
+    const delivery = Object.fromEntries(['customer','phone','area','address','notes'].map(field => [field,value(field)]));
+    const response = await fetch('/api/orders', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({delivery,items})
+    });
+    if (response.status === 409) {
+      feedback.textContent = 'الكمية المطلوبة غير متوفّرة. عدّلي الطلب وحاولي مجدّدًا.';
+      return;
+    }
+    if (!response.ok) throw Error();
+    const order = await response.json();
+    const orderLines = order.items.flatMap(item => [
+      `• ${item.name} (${item.sku})`,
+      `  اللون: ${localize(item.color)} | القياس: ${sizeLabel(item.size)} | الكمية: ${item.quantity}`,
+      `  ${money(item.unitCents / 100)} × ${item.quantity} = ${money(item.unitCents * item.quantity / 100)}`
+    ]);
+    const deliveryLines = ['معلومات التوصيل', 'الاسم: ' + delivery.customer, 'الهاتف: ' + delivery.phone,
+      'المنطقة: ' + delivery.area, 'العنوان: ' + delivery.address];
+    if (delivery.notes) deliveryLines.push('ملاحظات: ' + delivery.notes);
+    const message = ['السلام عليكم فريق سنّة ستايل، حابّة أطلب هيدا الأوردر.',
+      'رقم الطلب: ' + order.id, '', 'تفاصيل الطلب', ...orderLines, totalLabel + ': ' + money(order.cents / 100),
+      '', ...deliveryLines].join('\n');
+    const link = document.createElement('a');
+    link.href = whatsapp + '?text=' + encodeURIComponent(message);
+    link.textContent = 'افتحي واتساب لإرسال الرسالة';
+    feedback.replaceChildren('انحفظ الطلب. ', link);
+    submit.hidden = true;
+    location.assign(link.href);
+  } catch {
+    feedback.textContent = 'تعذّر حفظ الطلب. حاولي مجدّدًا.';
+  } finally { submit.disabled = false; }
 }
 
 function showProduct(product) {
@@ -172,11 +201,9 @@ function showProduct(product) {
   deliveryForm.onsubmit = event => {
     event.preventDefault();
     const colorIndex = Number(colors.querySelector('input:checked').value);
-    const colorName = localize(product.variants[colorIndex][0][0]);
     const size = sizesPanel.querySelector('input:checked');
     if (product.quantity === 0 || !size) return;
-    sendWhatsAppOrder(deliveryForm, [product.name + ' (' + product.sku + ')', 'اللون: ' + colorName,
-      'القياس: ' + sizeLabel(size.value), 'الكمية: 1', 'السعر: ' + money(product.price)]);
+    sendWhatsAppOrder(deliveryForm, [{sku:product.sku,color:colorIndex,size:size.value,quantity:1}]);
   };
   const updateVariant = () => {
     const index = Number(colors.querySelector('input:checked').value);
@@ -240,11 +267,7 @@ function renderCart(focusIndex, focusAction) {
     return;
   }
   const total = lines.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const orderLines = lines.flatMap(item => [
-    `• ${item.name} (${item.sku})`,
-    `  اللون: ${item.colorName} | القياس: ${sizeLabel(item.size)} | الكمية: ${item.quantity}`,
-    `  ${money(item.price)} × ${item.quantity} = ${money(item.price * item.quantity)}`
-  ]);
+  const orderItems = lines.map(({sku,color,size,quantity}) => ({sku,color,size,quantity}));
   const form = $('checkout').querySelector('form') || document.createElement('form');
   if (!form.children.length) {
     form.className = 'order-form';
@@ -252,7 +275,7 @@ function renderCart(focusIndex, focusAction) {
   }
   form.onsubmit = event => {
     event.preventDefault();
-    sendWhatsAppOrder(form, [...orderLines, '', totalLabel + ': ' + money(total)]);
+    sendWhatsAppOrder(form, orderItems);
   };
   const note = document.createElement('p');
   note.textContent = localize('نؤكّد السعر والتوفّر عبر واتساب قبل الدفع.');

@@ -15,5 +15,6 @@ function collect(dir, prefix = '') {
 }
 collect('dist');
 mkdirSync('dist/server',{recursive:true});
-writeFileSync('dist/server/index.js','const assets = '+JSON.stringify(assets)+';\n'+readFileSync('worker/index.mjs','utf8'));
+const catalog = JSON.parse(readFileSync('dist/catalog.js','utf8').replace(/^window\.storeCatalog\s*=\s*/, '').trim().replace(/;$/, ''));
+writeFileSync('dist/server/index.js','const assets = '+JSON.stringify(assets)+';\nconst defaultCatalog = '+JSON.stringify(catalog)+';\n'+readFileSync('worker/index.mjs','utf8'));
 

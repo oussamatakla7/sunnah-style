@@ -70,19 +70,26 @@ userTab.dataset.tab = 'users';
 userTab.textContent = '♙ المستخدمون';
 userTab.hidden = true;
 document.querySelector('.side').append(userTab);
+const ordersTab = document.createElement('button');
+ordersTab.type = 'button';
+ordersTab.dataset.tab = 'orders';
+ordersTab.textContent = 'الطلبات';
+ordersTab.hidden = true;
+userTab.before(ordersTab);
 function showView(next) {
   if (productsOnly && !next.startsWith('product')) return;
   if (view === 'page-editor' && next !== view && !applyInspector()) return;
   view = next;
-  for (const id of ['pages','products','layout','menu-editor','page-editor','product-editor','users']) $(id).hidden = id !== next;
+  for (const id of ['pages','products','layout','menu-editor','page-editor','product-editor','users','orders']) $(id).hidden = id !== next;
   for (const button of document.querySelectorAll('.side [data-tab]')) {
-    if (button.dataset.tab === (next === 'users' ? 'users' : next.startsWith('product') ? 'products' : next === 'menu-editor' || next === 'layout' || (next === 'page-editor' && $('page').value.startsWith('layout-')) ? 'layout' : 'pages')) button.setAttribute('aria-current','page');
+    if (button.dataset.tab === (['users','orders'].includes(next) ? next : next.startsWith('product') ? 'products' : next === 'menu-editor' || next === 'layout' || (next === 'page-editor' && $('page').value.startsWith('layout-')) ? 'layout' : 'pages')) button.setAttribute('aria-current','page');
     else button.removeAttribute('aria-current');
   }
   const target = {'page-editor':'page-actions','product-editor':'product-actions',products:'list-actions',layout:'layout-actions','menu-editor':'menu-actions'}[next];
   $('actions').hidden = !target;
   if (target) $(target).append($('actions'));
   if (next === 'users') refreshUsers();
+  if (next === 'orders') loadOrders();
 }
 for (const button of document.querySelectorAll('[data-tab]')) button.onclick = () => showView(button.dataset.tab);
 function editPage(key, title) {
@@ -670,6 +677,62 @@ function saveMenu() {
   return true;
 }
 
+let ordersCursor;
+let ordersLoading = false;
+const orderMoney = cents => new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(cents / 100);
+function orderCard(order) {
+  const card = document.createElement('details');
+  card.className = 'panel';
+  const summary = document.createElement('summary');
+  const date = new Intl.DateTimeFormat('ar-LB',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Beirut'}).format(new Date(order.createdAt));
+  summary.textContent = [order.delivery.customer,date,orderMoney(order.cents)].join(' · ');
+  card.append(summary);
+  const field = (label,value) => {
+    const p = document.createElement('p');
+    const bdi = document.createElement('bdi');
+    bdi.textContent = value;
+    p.append(label + ' ',bdi);
+    card.append(p);
+  };
+  field('رقم الطلب',order.id);
+  field('الاسم',order.delivery.customer);
+  field('الهاتف',order.delivery.phone);
+  field('المنطقة',order.delivery.area);
+  field('العنوان',order.delivery.address);
+  if (order.delivery.notes) field('الملاحظات',order.delivery.notes);
+  const items = document.createElement('ul');
+  for (const item of order.items) {
+    const li = document.createElement('li');
+    li.textContent = `${item.name} (${item.sku}) · اللون ${item.color} · القياس ${item.size} · الكمية ${item.quantity} · ${orderMoney(item.unitCents * item.quantity)}`;
+    items.append(li);
+  }
+  card.append(items);
+  field('المجموع',orderMoney(order.cents));
+  return card;
+}
+async function loadOrders(more = false) {
+  if (ordersLoading) return;
+  ordersLoading = true;
+  $('refresh-orders').disabled = $('more-orders').disabled = true;
+  try {
+    const response = await fetch('/api/admin/orders' + (more ? '?cursor=' + encodeURIComponent(ordersCursor) : ''));
+    if (!response.ok) throw Error();
+    const {orders,cursor} = await response.json();
+    const list = $('order-list');
+    if (!more) list.replaceChildren();
+    if (!orders.length && !more) list.textContent = 'ما في طلبات بعد.';
+    list.append(...orders.map(orderCard));
+    ordersCursor = cursor;
+    $('more-orders').hidden = !cursor;
+  } catch { status('تعذّر تحميل الطلبات.'); }
+  finally {
+    ordersLoading = false;
+    $('refresh-orders').disabled = $('more-orders').disabled = false;
+  }
+}
+$('refresh-orders').onclick = () => loadOrders();
+$('more-orders').onclick = () => loadOrders(true);
+
 async function loadState() {
   const response = await fetch('/api/admin/state');
   if (!response.ok) throw Error();
@@ -681,6 +744,7 @@ async function loadState() {
     showView('products');
   } else {
     userTab.hidden = false;
+    ordersTab.hidden = false;
     showView('pages');
   }
   pages = state.draft.pages;
