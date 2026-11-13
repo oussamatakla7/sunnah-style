@@ -1,0 +1,54 @@
+.products > .product {
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.products > .product > .product-art {
+  aspect-ratio: 1;
+  min-width: 0;
+}
+
+.products > .product > .product-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.products > .product > .product-info > h3 {
+  line-height: 1.35;
+  min-height: 2.7em;
+  overflow-wrap: anywhere;
+}
+
+.products > .product > .product-info > button {
+  margin-block-start: auto;
+}
+
+.products .swatches i {
+  flex-shrink: 0;
+}
+
+@supports (grid-template-rows: subgrid) {
+  .products > .product {
+    grid-row: span 6;
+    grid-template-rows: subgrid;
+    row-gap: 0;
+  }
+
+  .products > .product > .product-info {
+    display: grid;
+    grid-row: span 5;
+    grid-template-rows: subgrid;
+    row-gap: 0;
+  }
+
+  .products > .product > .product-info > button {
+    margin-block-start: 0;
+  }
+}
+
+@media (min-width: 651px) and (max-width: 920px) {
+  .featured-section .products {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

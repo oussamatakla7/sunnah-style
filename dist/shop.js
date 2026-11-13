@@ -91,6 +91,13 @@ function renderCatalog() {
 }
 
 function renderProducts(container, items) {
+  if (!document.getElementById('product-grid-style')) {
+    const stylesheet = document.createElement('link');
+    stylesheet.id = 'product-grid-style';
+    stylesheet.rel = 'stylesheet';
+    stylesheet.href = '/assets/product-grid.css';
+    document.head.append(stylesheet);
+  }
   container.innerHTML = items.map(product => `
     <article class="product">
       <div class="product-art"><img src="${escapeHtml(product.image)}" alt="" width="384" height="384" loading="lazy"></div>
