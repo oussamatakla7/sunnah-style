@@ -11,8 +11,11 @@ window.storeCatalog = [
         ],
         [
           38,
-          40,
-          44
+          42,
+          44,
+          46,
+          48,
+          52
         ],
         "assets/products/SSBM0001-0.jpg"
       ],
@@ -22,7 +25,12 @@ window.storeCatalog = [
           "#866688"
         ],
         [
-          40
+          38,
+          42,
+          44,
+          46,
+          48,
+          52
         ],
         "assets/products/SSBM0001-1.jpg"
       ]
@@ -44,8 +52,12 @@ window.storeCatalog = [
           "#646a47"
         ],
         [
-          40,
-          44
+          38,
+          42,
+          44,
+          46,
+          48,
+          52
         ],
         "assets/products/SSBM0002-0.jpg"
       ],
@@ -55,8 +67,12 @@ window.storeCatalog = [
           "#733445"
         ],
         [
-          40,
-          42
+          38,
+          42,
+          44,
+          46,
+          48,
+          52
         ],
         "assets/products/SSBM0002-1.jpg"
       ]
@@ -78,8 +94,12 @@ window.storeCatalog = [
           "#b8633c"
         ],
         [
-          40,
-          46
+          38,
+          42,
+          44,
+          46,
+          48,
+          52
         ],
         "assets/products/SSBM0003.jpg"
       ]
@@ -100,7 +120,14 @@ window.storeCatalog = [
           "زهري",
           "#c9829c"
         ],
-        null,
+        [
+          38,
+          42,
+          44,
+          46,
+          48,
+          52
+        ],
         "assets/products/SSBM0004-0.jpg"
       ],
       [
@@ -110,7 +137,11 @@ window.storeCatalog = [
         ],
         [
           38,
-          40
+          42,
+          44,
+          46,
+          48,
+          52
         ],
         "assets/products/SSBM0004-1.jpg"
       ],
@@ -120,7 +151,12 @@ window.storeCatalog = [
           "#26364b"
         ],
         [
-          42
+          38,
+          42,
+          44,
+          46,
+          48,
+          52
         ],
         "assets/products/SSBM0004-2.jpg"
       ]
@@ -142,7 +178,12 @@ window.storeCatalog = [
           "#242323"
         ],
         [
-          42
+          38,
+          42,
+          44,
+          46,
+          48,
+          52
         ],
         "assets/products/SSBM0005.jpg"
       ]
@@ -165,8 +206,11 @@ window.storeCatalog = [
         ],
         [
           38,
-          40,
-          42
+          42,
+          44,
+          46,
+          48,
+          52
         ],
         "assets/products/SSBM0006.jpg"
       ]
@@ -188,7 +232,12 @@ window.storeCatalog = [
           "#242323"
         ],
         [
-          40
+          38,
+          42,
+          44,
+          46,
+          48,
+          52
         ],
         "assets/products/SSBM0007.jpg"
       ]
@@ -226,9 +275,10 @@ window.storeCatalog = [
         ],
         [
           38,
+          42,
+          44,
           46,
           48,
-          50,
           52
         ],
         "assets/products/SSBM0008-1.jpg"
@@ -239,8 +289,11 @@ window.storeCatalog = [
           "#76523e"
         ],
         [
+          38,
+          42,
+          44,
+          46,
           48,
-          50,
           52
         ],
         "assets/products/SSBM0008-2.jpg"
@@ -263,7 +316,12 @@ window.storeCatalog = [
           "#242323"
         ],
         [
-          42
+          38,
+          42,
+          44,
+          46,
+          48,
+          52
         ],
         "assets/products/SSBM0009-0.jpg"
       ],
@@ -273,7 +331,12 @@ window.storeCatalog = [
           "#d8c3a3"
         ],
         [
-          "One Size"
+          38,
+          42,
+          44,
+          46,
+          48,
+          52
         ],
         "assets/products/SSBM0009-1.jpg"
       ]
@@ -295,9 +358,12 @@ window.storeCatalog = [
           "#242323"
         ],
         [
-          1,
-          2,
-          3
+          38,
+          42,
+          44,
+          46,
+          48,
+          52
         ],
         "assets/products/SSBM0010-0.jpg"
       ],
@@ -307,9 +373,12 @@ window.storeCatalog = [
           "#26364b"
         ],
         [
-          1,
-          2,
-          3
+          38,
+          42,
+          44,
+          46,
+          48,
+          52
         ],
         "assets/products/SSBM0010-1.jpg"
       ],
@@ -319,8 +388,12 @@ window.storeCatalog = [
           "#76523e"
         ],
         [
-          1,
-          2
+          38,
+          42,
+          44,
+          46,
+          48,
+          52
         ],
         "assets/products/SSBM0010-2.jpg"
       ],
@@ -330,8 +403,12 @@ window.storeCatalog = [
           "#733445"
         ],
         [
-          2,
-          3
+          38,
+          42,
+          44,
+          46,
+          48,
+          52
         ],
         "assets/products/SSBM0010-3.jpg"
       ],
@@ -341,8 +418,12 @@ window.storeCatalog = [
           "#9da27d"
         ],
         [
-          2,
-          3
+          38,
+          42,
+          44,
+          46,
+          48,
+          52
         ],
         "assets/products/SSBM0010-4.jpg"
       ]
@@ -364,8 +445,12 @@ window.storeCatalog = [
           "#242323"
         ],
         [
-          1,
-          2
+          38,
+          42,
+          44,
+          46,
+          48,
+          52
         ],
         "assets/products/SSBM0011-0.jpg"
       ],
@@ -375,8 +460,12 @@ window.storeCatalog = [
           "#d8c3a3"
         ],
         [
-          2,
-          3
+          38,
+          42,
+          44,
+          46,
+          48,
+          52
         ],
         "assets/products/SSBM0011-1.jpg"
       ],
@@ -386,8 +475,12 @@ window.storeCatalog = [
           "#a38874"
         ],
         [
-          2,
-          3
+          38,
+          42,
+          44,
+          46,
+          48,
+          52
         ],
         "assets/products/SSBM0011-2.jpg"
       ],
@@ -397,8 +490,12 @@ window.storeCatalog = [
           "#9da27d"
         ],
         [
-          2,
-          3
+          38,
+          42,
+          44,
+          46,
+          48,
+          52
         ],
         "assets/products/SSBM0011-3.jpg"
       ],
@@ -408,8 +505,12 @@ window.storeCatalog = [
           "#864f64"
         ],
         [
-          1,
-          2
+          38,
+          42,
+          44,
+          46,
+          48,
+          52
         ],
         "assets/products/SSBM0011-4.jpg"
       ]
@@ -430,7 +531,14 @@ window.storeCatalog = [
           "أسود",
           "#242323"
         ],
-        null,
+        [
+          38,
+          42,
+          44,
+          46,
+          48,
+          52
+        ],
         "assets/products/SSBM0012-0.jpg"
       ],
       [
@@ -438,7 +546,14 @@ window.storeCatalog = [
           "بني",
           "#76523e"
         ],
-        null,
+        [
+          38,
+          42,
+          44,
+          46,
+          48,
+          52
+        ],
         "assets/products/SSBM0012-1.jpg"
       ],
       [
@@ -447,8 +562,12 @@ window.storeCatalog = [
           "#d8c3a3"
         ],
         [
-          2,
-          3
+          38,
+          42,
+          44,
+          46,
+          48,
+          52
         ],
         "assets/products/SSBM0012-2.jpg"
       ],
@@ -458,8 +577,12 @@ window.storeCatalog = [
           "#9da27d"
         ],
         [
-          2,
-          3
+          38,
+          42,
+          44,
+          46,
+          48,
+          52
         ],
         "assets/products/SSBM0012-3.jpg"
       ]
@@ -482,9 +605,11 @@ window.storeCatalog = [
         ],
         [
           38,
-          40,
           42,
-          44
+          44,
+          46,
+          48,
+          52
         ],
         "assets/products/SSBM0013-0.jpg"
       ],
@@ -495,9 +620,11 @@ window.storeCatalog = [
         ],
         [
           38,
-          40,
           42,
-          44
+          44,
+          46,
+          48,
+          52
         ],
         "assets/products/SSBM0013-1.jpg"
       ],
@@ -508,9 +635,11 @@ window.storeCatalog = [
         ],
         [
           38,
-          40,
           42,
-          44
+          44,
+          46,
+          48,
+          52
         ],
         "assets/products/SSBM0013-2.jpg"
       ],
@@ -521,9 +650,11 @@ window.storeCatalog = [
         ],
         [
           38,
-          40,
           42,
-          44
+          44,
+          46,
+          48,
+          52
         ],
         "assets/products/SSBM0013-3.jpg"
       ],
@@ -534,9 +665,11 @@ window.storeCatalog = [
         ],
         [
           38,
-          40,
           42,
-          44
+          44,
+          46,
+          48,
+          52
         ],
         "assets/products/SSBM0013-4.jpg"
       ]
@@ -558,7 +691,12 @@ window.storeCatalog = [
           "#76523e"
         ],
         [
-          "One Size"
+          38,
+          42,
+          44,
+          46,
+          48,
+          52
         ],
         "assets/products/SSBM0014-0.jpg"
       ],
@@ -568,7 +706,12 @@ window.storeCatalog = [
           "#646a47"
         ],
         [
-          "One Size"
+          38,
+          42,
+          44,
+          46,
+          48,
+          52
         ],
         "assets/products/SSBM0014-1.jpg"
       ],
@@ -578,7 +721,12 @@ window.storeCatalog = [
           "#242323"
         ],
         [
-          "One Size"
+          38,
+          42,
+          44,
+          46,
+          48,
+          52
         ],
         "assets/products/SSBM0014-2.jpg"
       ]
