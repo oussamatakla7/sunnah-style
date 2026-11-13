@@ -72,6 +72,7 @@ userTab.hidden = true;
 document.querySelector('.side').append(userTab);
 function showView(next) {
   if (productsOnly && !next.startsWith('product')) return;
+  if (view === 'page-editor' && next !== view && !applyInspector()) return;
   view = next;
   for (const id of ['pages','products','layout','menu-editor','page-editor','product-editor','users']) $(id).hidden = id !== next;
   for (const button of document.querySelectorAll('.side [data-tab]')) {
@@ -191,6 +192,7 @@ function highlight() {
   outline(highlighted, '#a02562');
 }
 function listElements(selected) {
+  if (!applyInspector(false)) return;
   const items = nodes();
   $('element').replaceChildren(...items.map((node, index) => {
     const label = {HR:'فاصل',HEADER:'الهيدر',FOOTER:'الفوتر',SECTION:'قسم',IMG:'صورة',IFRAME:'الخريطة'}[node.tagName];
@@ -200,8 +202,18 @@ function listElements(selected) {
   loadElement();
 }
 const selectedNode = () => nodes()[$('element').selectedIndex];
+let inspectorNode;
+const inspectorChanges = new Set();
+for (const id of ['content','element-link','ink','fill','font','padding']) {
+  $(id).addEventListener('input', () => {
+    inspectorChanges.add(id);
+    status('في تعديلات بانتظار الحفظ أو النشر.');
+  });
+}
 function loadElement() {
+  inspectorChanges.clear();
   const node = selectedNode();
+  inspectorNode = node;
   highlight();
   $('apply').disabled = !node;
   $('section-tools').hidden = isLayout() || !node;
@@ -325,6 +337,7 @@ frame.onload = () => {
   });
 };
 function insertWidget(type, target = selectedNode()) {
+  if (!applyInspector(false)) return;
   const doc = frame.contentDocument;
   const main = doc.querySelector('main');
   if (!main || isLayout() || loadedPage !== activePage) return;
@@ -359,6 +372,7 @@ for (const button of document.querySelectorAll('[data-widget]')) {
   button.ondragstart = event => event.dataTransfer.setData('text/plain', 'sunnah-widget:' + button.dataset.widget);
 }
 for (const id of ['duplicate-node','remove-node']) $(id).onclick = () => {
+  if (!applyInspector(false)) return;
   const node = selectedNode();
   if (!node || isLayout() || !node.closest('main')) return;
   clearOutlines();
@@ -376,40 +390,54 @@ for (const id of ['duplicate-node','remove-node']) $(id).onclick = () => {
   }
   savePage();
 };
-$('element').onchange = loadElement;
+$('element').onchange = () => {
+  const next = selectedNode();
+  if (applyInspector(false)) listElements(next);
+  else $('element').selectedIndex = nodes().indexOf(inspectorNode);
+};
 $('page').onchange = openPage;
-$('apply').onclick = () => {
-  const node = selectedNode();
-  if (!node || loadedPage !== activePage) return;
-  if (node.matches('a')) {
-    const href = $('element-link').value.trim();
+function applyInspector(refresh = true) {
+  if (!inspectorChanges.size) return true;
+  const node = inspectorNode;
+  if (!node || loadedPage !== activePage) return false;
+  let href;
+  if (inspectorChanges.has('element-link')) {
+    href = $('element-link').value.trim();
     try {
       if (!href || !['https:', 'http:', 'tel:', 'mailto:'].includes(new URL(href, location.origin).protocol)) throw Error();
-    } catch { status('أدخلي رابطًا صالحًا.'); return; }
-    node.setAttribute('href', href);
+    } catch { status('أدخلي رابطًا صالحًا.'); return false; }
   }
-  if (!$('content').disabled) {
+  for (const id of ['font','padding']) {
+    if (inspectorChanges.has(id) && !$(id).reportValidity()) return false;
+  }
+  if (inspectorChanges.has('content') && !$('content').disabled) {
     const value = $('content').value;
     if (node.matches('img,iframe')) {
       if (node.matches('iframe') && !/^https:\/\/(?:maps\.google\.com|www\.google\.com)\//.test(value)) {
         status('أدخلي رابط خريطة Google صالحًا.');
-        return;
+        return false;
       }
       if (node.matches('img') && !/^(https:\/\/|\/?assets\/|data:image\/jpeg;base64,)/.test(value)) {
         status('أدخلي رابط صورة صالحًا.');
-        return;
+        return false;
       }
       node.setAttribute('src', value);
     } else node.textContent = value;
   }
+  if (href !== undefined) node.setAttribute('href', href);
   clearOutlines();
   if ($('ink').dataset.changed) node.style.color = $('ink').value;
   if ($('fill').dataset.changed) node.style.backgroundColor = $('fill').value;
-  if ($('font').value) node.style.fontSize = $('font').value + 'px';
-  if ($('padding').value) node.style.padding = $('padding').value + 'px';
+  if (inspectorChanges.has('font')) node.style.fontSize = $('font').value ? $('font').value + 'px' : '';
+  if (inspectorChanges.has('padding')) node.style.padding = $('padding').value ? $('padding').value + 'px' : '';
+  inspectorChanges.clear();
   savePage();
-};
+  if (refresh) listElements(node);
+  return true;
+}
+$('apply').onclick = () => applyInspector();
 $('page-image').onchange = event => {
+  if (!applyInspector(false)) return;
   const node = selectedNode();
   const page = activePage;
   upload(event.target.files[0], data => {
@@ -422,6 +450,7 @@ $('page-image').onchange = event => {
   });
 };
 for (const direction of ['up','down']) $(direction).onclick = () => {
+  if (!applyInspector(false)) return;
   const section = selectedNode()?.closest(sectionSelector);
   const sibling = direction === 'up' ? section?.previousElementSibling : section?.nextElementSibling;
   if (!sibling) return;
@@ -663,6 +692,7 @@ async function loadState() {
   $('save').disabled = $('publish').disabled = false;
 }
 async function commit(action) {
+  if (view === 'page-editor' && !applyInspector()) return;
   if (view === 'menu-editor' && !saveMenu()) return;
   if (view === 'product-editor' && (!$('product-form').reportValidity() || !$('product-form').onsubmit(new Event('submit')))) return;
   $('save').disabled = $('publish').disabled = true;
