@@ -71,7 +71,7 @@ function renderCatalog() {
   $('results').textContent = visible.length ? visible.length + ' موديل' : 'ما لقينا موديلات مطابقة.';
   products.innerHTML = visible.map(product => `
     <article class="product">
-      <div class="product-art" data-cat="${product.category - 1}"><img src="assets/logo.jpg" loading="lazy" alt=""></div>
+      <div class="product-art" data-cat="${product.category - 1}"><span>الصورة قريباً</span></div>
       <div class="product-info">
         <small dir="ltr">${product.sku}</small>
         <h3>${product.name}</h3>
@@ -180,4 +180,3 @@ $('cart-lines').addEventListener('click', event => {
 for (const dialog of [detail, cart]) dialog.querySelector('[data-close]').addEventListener('click', () => dialog.close());
 saveBag();
 renderCatalog();
-
