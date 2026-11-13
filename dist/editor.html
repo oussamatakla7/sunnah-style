@@ -65,6 +65,17 @@ tbody tr:nth-child(odd){background:#f8fafb}.table-photo{width:42px;height:42px;o
 <nav class="side" aria-label="إدارة المتجر"><button type="button" data-tab="pages" aria-current="page">▤ الصفحات</button><button type="button" data-tab="products">▦ المنتجات</button><button type="button" data-tab="layout">▤ الهيدر والفوتر</button></nav>
 <main>
 <p id="status" role="status"></p>
+<section id="users" hidden>
+  <div class="row spread view-title"><h1>المستخدمون</h1><button id="new-user" class="primary">إضافة مستخدم</button></div>
+  <form id="user-form" class="panel add-page" hidden>
+    <label>اسم المستخدم<input id="account-name" dir="ltr" pattern="[a-z][a-z0-9_\-]{2,39}" required></label>
+    <label>الصلاحية<select id="account-role"><option value="products">إدارة المنتجات فقط</option><option value="admin">إدارة كاملة</option></select></label>
+    <label>كلمة المرور<input id="account-password" type="password" autocomplete="new-password" minlength="8" maxlength="128"></label>
+    <small id="password-hint"></small>
+    <div class="row"><button id="save-user" class="primary">حفظ المستخدم</button><button id="cancel-user" type="button">إلغاء</button></div>
+  </form>
+  <div class="table-wrap"><table><thead><tr><th scope="col">اسم المستخدم</th><th scope="col">الصلاحية</th><th scope="col">الإجراءات</th></tr></thead><tbody id="user-rows"></tbody></table></div>
+</section>
 <section id="pages" hidden>
   <div class="row spread view-title"><h1>الصفحات</h1><button id="new-page" class="primary" disabled>إضافة صفحة</button></div>
   <form id="new-page-form" class="panel add-page" hidden><label>اسم الصفحة<input id="new-title" maxlength="100" required></label><label>رابط الصفحة بالإنجليزية<input id="new-slug" dir="ltr" placeholder="new-collection" maxlength="60" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" required></label><div class="row"><button class="primary">إنشاء وتعديل</button><button id="cancel-page" type="button">إلغاء</button></div></form>

@@ -64,17 +64,24 @@ function upload(file, callback) {
 
 let view = 'pages';
 let productsOnly = false;
+const userTab = document.createElement('button');
+userTab.type = 'button';
+userTab.dataset.tab = 'users';
+userTab.textContent = '♙ المستخدمون';
+userTab.hidden = true;
+document.querySelector('.side').append(userTab);
 function showView(next) {
   if (productsOnly && !next.startsWith('product')) return;
   view = next;
-  for (const id of ['pages','products','layout','menu-editor','page-editor','product-editor']) $(id).hidden = id !== next;
+  for (const id of ['pages','products','layout','menu-editor','page-editor','product-editor','users']) $(id).hidden = id !== next;
   for (const button of document.querySelectorAll('.side [data-tab]')) {
-    if (button.dataset.tab === (next.startsWith('product') ? 'products' : next === 'menu-editor' || next === 'layout' || (next === 'page-editor' && $('page').value.startsWith('layout-')) ? 'layout' : 'pages')) button.setAttribute('aria-current','page');
+    if (button.dataset.tab === (next === 'users' ? 'users' : next.startsWith('product') ? 'products' : next === 'menu-editor' || next === 'layout' || (next === 'page-editor' && $('page').value.startsWith('layout-')) ? 'layout' : 'pages')) button.setAttribute('aria-current','page');
     else button.removeAttribute('aria-current');
   }
   const target = {'page-editor':'page-actions','product-editor':'product-actions',products:'list-actions',layout:'layout-actions','menu-editor':'menu-actions'}[next];
   $('actions').hidden = !target;
   if (target) $(target).append($('actions'));
+  if (next === 'users') refreshUsers();
 }
 for (const button of document.querySelectorAll('[data-tab]')) button.onclick = () => showView(button.dataset.tab);
 function editPage(key, title) {
@@ -522,6 +529,75 @@ $('delete').onclick = () => {
 };
 
 let menuHeader;
+let accountList;
+let editingAccount;
+function editAccount(account) {
+  editingAccount = account;
+  $('account-name').value = account?.username || '';
+  $('account-name').readOnly = Boolean(account);
+  $('account-role').value = account?.role || 'products';
+  $('account-role').disabled = account?.username === 'admin' || account?.username === accountList.current;
+  $('account-password').value = '';
+  $('account-password').required = !account;
+  $('password-hint').textContent = account ? 'اتركي كلمة المرور فارغة لتبقى كما هي.' : 'اختاري كلمة مرور من 8 أحرف على الأقل.';
+  $('user-form').hidden = false;
+  $(account ? 'account-password' : 'account-name').focus();
+}
+$('new-user').onclick = () => { if (accountList) editAccount(null); };
+$('cancel-user').onclick = () => { $('user-form').hidden = true; $('account-password').value = ''; };
+async function refreshUsers() {
+  try {
+    const response = await fetch('/api/admin/users');
+    if (!response.ok) throw Error();
+    accountList = await response.json();
+    $('user-rows').replaceChildren(...accountList.users.map(account => {
+      const row = document.createElement('tr');
+      row.insertCell().textContent = account.username;
+      row.insertCell().textContent = account.role === 'admin' ? 'إدارة كاملة' : 'إدارة المنتجات فقط';
+      const cell = row.insertCell();
+      const edit = document.createElement('button');
+      edit.textContent = 'تعديل';
+      edit.onclick = () => editAccount(account);
+      cell.append(edit);
+      if (account.username !== 'admin' && account.username !== accountList.current) {
+        const remove = document.createElement('button');
+        remove.textContent = 'حذف';
+        remove.className = 'danger';
+        remove.onclick = async () => {
+          if (confirm('حذف حساب ' + account.username + '؟')) await changeAccount({action:'delete', username:account.username});
+        };
+        cell.append(remove);
+      }
+      labelCells(row, ['','الصلاحية','']);
+      return row;
+    }));
+  } catch { status('تعذّر تحميل المستخدمين.'); }
+}
+async function changeAccount(input) {
+  try {
+    const response = await fetch('/api/admin/users', {
+      method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(input)
+    });
+    if (response.status === 409) return status('اسم المستخدم مستخدم أو تغيّرت القائمة. حدّثيها وحاولي مجدّدًا.');
+    if (!response.ok) return status('تعذّر تعديل الحساب. تحقّقي من البيانات والصلاحية.');
+    $('user-form').reset();
+    $('user-form').hidden = true;
+    if (input.username === accountList.current && input.password) {
+      location.assign('/admin-login');
+      return;
+    }
+    status(input.action === 'delete' ? 'حُذف الحساب.' : 'حُفظ الحساب.');
+    await refreshUsers();
+  } catch { status('تعذّر حفظ الحساب.'); }
+}
+$('user-form').onsubmit = async event => {
+  event.preventDefault();
+  $('save-user').disabled = true;
+  try {
+    await changeAccount({action:editingAccount ? 'update' : 'create',username:$('account-name').value,
+      role:$('account-role').value,password:$('account-password').value});
+  } finally { $('save-user').disabled = false; }
+};
 function appendMenuRow(text = '', href = '') {
   const row = document.createElement('div');
   row.className = 'menu-row';
@@ -574,7 +650,10 @@ async function loadState() {
   if (productsOnly) {
     for (const button of document.querySelectorAll('.side [data-tab]:not([data-tab=products])')) button.hidden = true;
     showView('products');
-  } else showView('pages');
+  } else {
+    userTab.hidden = false;
+    showView('pages');
+  }
   pages = state.draft.pages;
   products = state.draft.products ?? window.storeCatalog;
   publishedPages = state.publishedPages || [];

@@ -3,7 +3,7 @@ const pagePaths = new Map([['/', 'index'], ['/index', 'index'], ['/index.html', 
 const customPagePath = /^\/pages\/[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const isCustomPage = key => key.length <= 67 && customPagePath.test(key);
 const stateKey = 'store-state.json';
-const adminPaths = new Set(['/editor', '/editor.html', '/editor.js', '/api/admin/state']);
+const adminPaths = new Set(['/editor', '/editor.html', '/editor.js', '/api/admin/state', '/api/admin/users']);
 const noCache = {'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff'};
 const json = (value, status = 200) => Response.json(value, {status, headers: noCache});
 const empty = {revision: 0, draft: {pages: {}, products: null}, live: {pages: {}, products: null}};
@@ -91,14 +91,63 @@ const sameOrigin = request => request.headers.get('origin') === new URL(request.
 const sessionToken = request => request.headers.get('cookie')?.split(';').map(part => part.trim())
   .find(part => part.startsWith(cookieName+'='))?.slice(cookieName.length+1);
 const sessionKey = async token => 'admin/sessions/' + hex(await crypto.subtle.digest('SHA-256',encode.encode(token)));
+const usersKey = 'admin/users.json';
+const validUsername = name => typeof name === 'string' && /^[a-z][a-z0-9_-]{2,39}$/.test(name);
+async function accounts(env) {
+  const stored = await env.BUCKET.get(usersKey);
+  if (stored) return {data:await stored.json(), etag:stored.etag};
+  const data = {admin:{role:'admin', verifier:env.ADMIN_PASSWORD_VERIFIER, version:'initial'}};
+  if (env.PRODUCTS_PASSWORD_VERIFIER) data.sunnah = {role:'products', verifier:env.PRODUCTS_PASSWORD_VERIFIER, version:'initial'};
+  return {data, etag:null};
+}
+const passwordHash = async (password, salt) => {
+  const key = await crypto.subtle.importKey('raw',encode.encode(password),'PBKDF2',false,['deriveBits']);
+  return new Uint8Array(await crypto.subtle.deriveBits(
+    {name:'PBKDF2',salt:encode.encode(salt),iterations:100000,hash:'SHA-256'},key,256));
+};
+async function manageUsers(request, env, current) {
+  if (current.role !== 'admin') return json({error:'forbidden'},403);
+  const {data, etag} = await accounts(env);
+  if (request.method === 'GET') return json({current:current.username, users:Object.entries(data).map(([username, {role}]) => ({username,role}))});
+  if (request.method !== 'PUT') return json({error:'method'},405);
+  if (!sameOrigin(request) || request.headers.get('content-type') !== 'application/json') return json({error:'origin'},403);
+  let input;
+  try { const body = await request.text(); if (body.length > 2048) return json({error:'invalid'},400); input = JSON.parse(body); }
+  catch { return json({error:'invalid'},400); }
+  const {username, role, password, action} = input || {};
+  if (!validUsername(username) || !['create','update','delete'].includes(action)) return json({error:'invalid'},400);
+  const existing = Object.hasOwn(data,username) ? data[username] : null;
+  if ((action === 'create') === Boolean(existing)) return json({error:'conflict'},409);
+  if ((username === 'admin' || username === current.username) &&
+      (action === 'delete' || role !== 'admin')) return json({error:'protected'},400);
+  if (action === 'delete') delete data[username];
+  else {
+    if (!['admin','products'].includes(role) || typeof password !== 'string' ||
+        (password ? password.length < 8 || password.length > 128 : !existing)) return json({error:'invalid'},400);
+    let verifier = existing?.verifier;
+    if (password) {
+      const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
+      verifier = salt + ':' + hex(await passwordHash(password,salt));
+    }
+    data[username] = {role,verifier,version:crypto.randomUUID()};
+  }
+  const written = await env.BUCKET.put(usersKey,JSON.stringify(data),{
+    onlyIf:etag ? {etagMatches:etag} : {etagDoesNotMatch:'*'}
+  });
+  return written ? json({ok:true}) : json({error:'conflict'},409);
+}
 
 async function session(request, env) {
   const token = sessionToken(request);
   if (!token || !/^[a-f0-9]{64}$/.test(token)) return null;
   const key = await sessionKey(token);
   const entry = await env.BUCKET.head(key);
-  return Number(entry?.customMetadata?.expires) > Date.now()
-    ? {key, role:entry.customMetadata.role === 'products' ? 'products' : 'admin'} : null;
+  if (!(Number(entry?.customMetadata?.expires) > Date.now())) return null;
+  const username = entry.customMetadata.username || (entry.customMetadata.role === 'products' ? 'sunnah' : 'admin');
+  const {data} = await accounts(env);
+  const account = Object.hasOwn(data,username) ? data[username] : null;
+  return account && account.version === (entry.customMetadata.version || 'initial')
+    ? {key,username,role:account.role} : null;
 }
 
 function loginPage(message = '', status = 200) {
@@ -128,20 +177,19 @@ async function login(request, env) {
   }
   const fields = new URLSearchParams(body + decoder.decode());
   const username = fields.get('username');
-  const role = username === 'sunnah' ? 'products' : 'admin';
-  const verifier = role === 'products' ? env.PRODUCTS_PASSWORD_VERIFIER : env.ADMIN_PASSWORD_VERIFIER;
-  if (!/^[a-f0-9]{32}:[a-f0-9]{64}$/.test(verifier || '')) return loginPage('تسجيل الدخول غير متاح حاليًا.',503);
+  const {data} = await accounts(env);
+  const account = validUsername(username) && Object.hasOwn(data,username) ? data[username] : null;
+  const verifier = account?.verifier;
+  if (!/^[a-f0-9]{32}:[a-f0-9]{64}$/.test(verifier || '')) return loginPage('اسم المستخدم أو كلمة المرور غير صحيحة.',401);
   const password = fields.get('password') || '';
   const [salt, expected] = verifier.split(':');
-  const key = await crypto.subtle.importKey('raw',encode.encode(password),'PBKDF2',false,['deriveBits']);
-  const actual = new Uint8Array(await crypto.subtle.deriveBits(
-    {name:'PBKDF2',salt:encode.encode(salt),iterations:100000,hash:'SHA-256'},key,256));
+  const actual = await passwordHash(password,salt);
   let mismatch = 0;
   const target = bytes(expected);
   for (let index = 0; index < target.length; index++) mismatch |= target[index] ^ actual[index];
-  if (!['admin','sunnah'].includes(username) || mismatch !== 0) return loginPage('اسم المستخدم أو كلمة المرور غير صحيحة.',401);
+  if (mismatch !== 0) return loginPage('اسم المستخدم أو كلمة المرور غير صحيحة.',401);
   const token = hex(crypto.getRandomValues(new Uint8Array(32)));
-  await env.BUCKET.put(await sessionKey(token),'',{customMetadata:{role,expires:String(Date.now()+sessionAge*1000)}});
+  await env.BUCKET.put(await sessionKey(token),'',{customMetadata:{username,version:account.version,expires:String(Date.now()+sessionAge*1000)}});
   return redirect('/editor',cookie(token,sessionAge));
 }
 
@@ -169,6 +217,7 @@ export default {
         if (path === '/editor' || path === '/editor.html') return redirect(loginPath);
         return json({error:'login'},401);
       }
+      if (path === '/api/admin/users') return manageUsers(request,env,current);
       if (path === '/api/admin/state' && request.method === 'PUT') return updateState(request, env.BUCKET, current.role);
       if (path === '/api/admin/state' && request.method === 'GET') {
         const {data} = await getState(env.BUCKET);
