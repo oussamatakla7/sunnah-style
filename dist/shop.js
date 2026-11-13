@@ -1,4 +1,8 @@
 const english = document.documentElement.lang === 'en';
+const temporaryPrice = 100;
+const money = amount => '$' + amount.toLocaleString('en-US');
+const temporaryLabel = english ? 'Temporary price' : 'سعر مؤقّت';
+const totalLabel = english ? 'Estimated total' : 'المجموع التقديري';
 const translations = {
   "الكل": "All",
   "فساتين سهرة": "Evening dresses",
@@ -34,8 +38,8 @@ const translations = {
   "مرحبا Sunnah Style، بدي استفسر عن السعر والتوفّر لهيدي القطع:": "Hi Sunnah Style, could you confirm prices and availability for these items?",
   "قياس": "Size",
   "الكمية": "Quantity",
-  "ابعتي الطلب ع واتساب": "Send order on WhatsApp",
-  "المحل بيأكّد السعر والتوفّر وبيتابع الطلب معك ع واتساب.": "The boutique will confirm pricing and availability and follow up with you on WhatsApp.",
+  "أرسلي طلبكِ عبر واتساب": "Send your order on WhatsApp",
+  "منأكّد السعر والتوفّر معكِ على واتساب قبل الدفع.": "We confirm the price and availability on WhatsApp before payment.",
   "يُحدّد عبر واتساب": "Confirm on WhatsApp"
 };
 const localize = text => english ? translations[text] ?? text : text;
@@ -117,7 +121,7 @@ function renderCatalog() {
       <div class="product-art" data-cat="${product.category - 1}"><span>${localize('الصورة قريباً')}</span></div>
       <div class="product-info">
         <small dir="ltr">${product.sku}</small>
-        <h3>${product.name}</h3>
+        <h3>${product.name}</h3><p class="item-price"><bdi>${money(temporaryPrice)}</bdi> <small>${temporaryLabel}</small></p>
         <div class="swatches" aria-label="${product.variants.map(([color]) => localize(color[0])).join(english ? ', ' : '، ')}">
           ${product.variants.map(([color]) => `<i title="${localize(color[0])}" style="background:${color[1]}"></i>`).join('')}
         </div>
@@ -129,7 +133,7 @@ function renderCatalog() {
 function showProduct(product) {
   $('detail-body').innerHTML = `
     <p><bdi>${product.sku}</bdi> · ${categories[product.category]}</p>
-    <h2 id="detail-title">${product.name}</h2>
+    <h2 id="detail-title">${product.name}</h2><p class="item-price"><bdi>${money(temporaryPrice)}</bdi> <small>${temporaryLabel}</small></p>
     <p>${localize('السعر والتوفّر بيتأكدوا عبر واتساب.')}</p>
     <form id="add-form">
       <label>${localize('اللون')}<select id="color">${product.variants.map(([color], i) => `<option value="${i}">${localize(color[0])}</option>`).join('')}</select></label>
@@ -165,7 +169,7 @@ function renderCart(focusIndex, focusAction) {
     return { ...item, name: product.name, colorName: localize(product.variants[item.color][0][0]) };
   });
   $('cart-lines').innerHTML = lines.length ? lines.map((item, index) => `
-    <div class="cart-line"><div><strong>${item.name}</strong><small>${item.colorName} · <bdi>${localize(item.size)}</bdi></small></div>
+    <div class="cart-line"><div><strong>${item.name}</strong><small>${item.colorName} · <bdi>${localize(item.size)}</bdi> · <bdi>${money(temporaryPrice * item.quantity)}</bdi></small></div>
       <div class="quantity"><button data-index="${index}" data-action="minus" aria-label="${item.quantity === 1 ? localize('إزالة القطعة') : localize('خفّضي الكمية')}">−</button><span>${item.quantity}</span><button data-index="${index}" data-action="plus" aria-label="${localize('زيدي الكمية')}" ${item.quantity === 99 ? 'disabled' : ''}>+</button></div>
     </div>`).join('') : `<p>${localize('الحقيبة بعدها فاضية.')}</p>`;
   if (!lines.length) {
@@ -173,18 +177,24 @@ function renderCart(focusIndex, focusAction) {
     if (focusAction) cart.querySelector('[data-close]').focus();
     return;
   }
+  const total = lines.reduce((sum, item) => sum + temporaryPrice * item.quantity, 0);
   const message = [localize('مرحبا Sunnah Style، بدي استفسر عن السعر والتوفّر لهيدي القطع:'), '', ...lines.map(item =>
     `• ${item.name} (${item.sku}) — ${item.colorName} — ${localize('قياس')} ${localize(item.size)} — ${localize('الكمية')} ${item.quantity}`
-  )].join('\n');
+  ), '', totalLabel + ': ' + money(total)].join('\n');
   const link = document.createElement('a');
   link.className = 'button';
   link.href = whatsapp + '?text=' + encodeURIComponent(message);
   link.target = '_blank';
   link.rel = 'noopener';
-  link.textContent = localize('ابعتي الطلب ع واتساب');
+  link.textContent = localize('أرسلي طلبكِ عبر واتساب');
   const note = document.createElement('p');
-  note.textContent = localize('المحل بيأكّد السعر والتوفّر وبيتابع الطلب معك ع واتساب.');
-  $('checkout').replaceChildren(note, link);
+  note.textContent = localize('منأكّد السعر والتوفّر معكِ على واتساب قبل الدفع.');
+  const summary = document.createElement('p');
+  summary.className = 'cart-total';
+  const amount = document.createElement('bdi');
+  amount.textContent = money(total);
+  summary.append(totalLabel, amount);
+  $('checkout').replaceChildren(summary, note, link);
   if (focusAction) {
     const row = $('cart-lines').children[Math.min(focusIndex, lines.length - 1)];
     (row.querySelector(`[data-action="${focusAction}"]:not(:disabled)`) || row.querySelector('button')).focus();

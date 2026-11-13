@@ -95,3 +95,5 @@ h1 { font-size: clamp(3.1rem, 5vw, 5.4rem); line-height: 1.06; margin-bottom: 1.
   .category-label span { display: none; }
 }
 .category-links img { aspect-ratio: 3/5; object-position: center top; }
+.hero-order-note { margin: .75rem 0 0; max-width: 28rem; color: #364f43; font-size: .88rem; line-height: 1.6; } @media(max-width:650px) { .hero-order-note { margin-inline: auto; } }
+.item-price { margin: .15rem 0 .55rem; color: var(--green); font-weight: 600; } .item-price small { font-weight: 400; color: var(--muted); letter-spacing: 0; } .cart-total { display: flex; justify-content: space-between; font-weight: 700; }
