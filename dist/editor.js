@@ -1,29 +1,12 @@
 const $ = id => document.getElementById(id);
-const read = (key, fallback) => {
-  try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
-  catch { return fallback; }
-};
-const catalogKey = 'sunnah-editor-catalog';
-const pagesKey = 'sunnah-editor-pages';
-let products = read(catalogKey, window.storeCatalog);
-let pages = read(pagesKey, {});
+let products;
+let pages;
+let revision;
 let currentSku = '';
 let image = '';
 let activePage;
 const frame = $('preview');
 const status = message => { $('status').textContent = message; };
-function persist(key, value) {
-  try { localStorage.setItem(key, JSON.stringify(value)); status('حُفظت المسودة.'); }
-  catch { status('مساحة الحفظ غير كافية. نزّلي الملف قبل إغلاق المحرّر.'); }
-}
-function download(name, content) {
-  const url = URL.createObjectURL(new Blob([content], {type:'application/octet-stream'}));
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = name;
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
 function upload(file, callback) {
   if (!file || !/^image\/(png|jpeg|webp|gif)$/.test(file.type)) {
     status('اختاري صورة JPEG أو PNG أو WebP أو GIF.');
@@ -91,7 +74,7 @@ function pageSource() {
 }
 function savePage() {
   pages[activePage] = pageSource();
-  persist(pagesKey, pages);
+  status('تعديلات بانتظار الحفظ.');
 }
 async function openPage() {
   const page = $('page').value;
@@ -157,7 +140,7 @@ for (const direction of ['up','down']) $(direction).onclick = () => {
   listElements(section);
   savePage();
 };
-$('download-page').onclick = () => { if (activePage) download(activePage + '.html', pageSource()); };
+
 function addVariant(variant = [['','#242323'],null,'']) {
   const row = document.createElement('div');
   row.className = 'variant';
@@ -216,15 +199,49 @@ $('product-form').onsubmit = event => {
   const index = products.findIndex(p => p.sku === currentSku);
   if (index < 0) products.push(product);
   else products[index] = product;
-  persist(catalogKey, products);
+  status('تعديلات بانتظار الحفظ.');
   listProducts(sku);
 };
 $('delete').onclick = () => {
   if (!currentSku || !confirm('حذف القطعة من المسودة؟')) return;
   products = products.filter(p => p.sku !== currentSku);
-  persist(catalogKey, products);
+  status('تعديلات بانتظار الحفظ.');
   listProducts(products[0]?.sku || '');
 };
-$('download-catalog').onclick = () => download('catalog.js','window.storeCatalog = ' + JSON.stringify(products,null,2) + ';\n');
-listProducts(products[0]?.sku || '');
-openPage();
+
+async function loadState() {
+  const response = await fetch('/api/admin/state');
+  if (!response.ok) throw Error();
+  const state = await response.json();
+  revision = state.revision;
+  pages = state.draft.pages;
+  products = state.draft.products ?? window.storeCatalog;
+  listProducts(products[0]?.sku || '');
+  await openPage();
+  $('save').disabled = $('publish').disabled = false;
+}
+async function commit(action) {
+  $('save').disabled = $('publish').disabled = true;
+  try {
+    const response = await fetch('/api/admin/state', {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({action, revision, content: {pages, products}})
+    });
+    if (response.status === 409) {
+      status('تعدّلت المسودة من جلسة أخرى. حدّثي الصفحة قبل الحفظ.');
+      return;
+    }
+    if (response.status === 413) {
+      status('حجم التعديلات كبير. صغّري الصور وحاولي مجددًا.');
+      return;
+    }
+    if (!response.ok) throw Error();
+    revision = (await response.json()).revision;
+    status(action === 'publish' ? 'نُشرت التعديلات على المتجر.' : 'حُفظت المسودة.');
+  } catch { status('تعذّر حفظ التعديلات. تحقّقي من تسجيل الدخول وحاولي مجددًا.'); }
+  finally { $('save').disabled = $('publish').disabled = false; }
+}
+$('save').onclick = () => commit('save');
+$('publish').onclick = () => commit('publish');
+loadState().catch(() => status('تعذّر تحميل المسودة. أعيدي فتح اللوحة.'));

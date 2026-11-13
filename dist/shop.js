@@ -113,7 +113,7 @@ function showProduct(product) {
     <p>${localize('نؤكّد السعر والتوفّر عبر واتساب.')}</p>
     ${product.description ? "<p>" + escapeHtml(product.description) + "</p>" : ""}
     <form id="add-form">
-      <fieldset class="variant-picker"><legend>اللون</legend><div class="variant-options" id="colors">${product.variants.map(([color], index) => `<label class="variant-option"><input type="radio" name="color" value="${index}" ${index === 0 ? 'checked' : ''}><span><i style="background:${color[1]}"></i>${escapeHtml(localize(color[0]))}</span></label>`).join('')}</div></fieldset>
+      <fieldset class="variant-picker"><legend>اللون</legend><div class="variant-options" id="colors">${product.variants.map(([color], index) => `<label class="variant-option"><input type="radio" name="color" aria-label="${escapeHtml(localize(color[0]))}" value="${index}" ${index === 0 ? 'checked' : ''}><span><i style="background:${color[1]}"></i></span></label>`).join('')}</div></fieldset>
       <fieldset class="variant-picker"><legend>القياس</legend><div class="variant-options" id="sizes"></div></fieldset>
       <button type="submit" class="button">${localize('أضيفي إلى السلة')}</button>
     </form>`;
