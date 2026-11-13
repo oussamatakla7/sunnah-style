@@ -35,7 +35,7 @@ const translations = {
   "خفّضي الكمية": "Decrease quantity",
   "زيدي الكمية": "Increase quantity",
   "الحقيبة بعدها فاضية.": "Your bag is empty.",
-  "مرحبا Sunnah Style، بدي استفسر عن السعر والتوفّر لهيدي القطع:": "Hi Sunnah Style, could you confirm prices and availability for these items?",
+  "السلام عليكم فريق سنّة ستايل، بدي أطلب هيدا الأوردر:": "Assalamu alaikum Sunnah Style team, I would like to place this order:",
   "قياس": "Size",
   "الكمية": "Quantity",
   "أرسلي طلبكِ عبر واتساب": "Send your order on WhatsApp",
@@ -178,8 +178,8 @@ function renderCart(focusIndex, focusAction) {
     return;
   }
   const total = lines.reduce((sum, item) => sum + temporaryPrice * item.quantity, 0);
-  const message = [localize('مرحبا Sunnah Style، بدي استفسر عن السعر والتوفّر لهيدي القطع:'), '', ...lines.map(item =>
-    `• ${item.name} (${item.sku}) — ${item.colorName} — ${localize('قياس')} ${localize(item.size)} — ${localize('الكمية')} ${item.quantity}`
+  const message = [localize('السلام عليكم فريق سنّة ستايل، بدي أطلب هيدا الأوردر:'), '', ...lines.map(item =>
+    `• ${item.name} (${item.sku}) — ${localize('اللون')}: ${item.colorName} — ${localize('قياس')} ${localize(item.size)} — ${localize('الكمية')} ${item.quantity} × ${money(temporaryPrice)} = ${money(temporaryPrice * item.quantity)}`
   ), '', totalLabel + ': ' + money(total)].join('\n');
   const link = document.createElement('a');
   link.className = 'button';
