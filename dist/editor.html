@@ -39,25 +39,42 @@ tbody tr:nth-child(odd){background:#f8fafb}.table-photo{width:42px;height:42px;o
 #preview[data-width=tablet]{max-width:768px}#preview[data-width=mobile]{max-width:390px}
 @media(max-width:950px){.shell{grid-template-columns:135px minmax(0,1fr)}.product-layout{grid-template-columns:minmax(0,1fr) 215px}.builder{grid-template-columns:215px minmax(0,1fr)}}
 @media(max-width:700px){.shell,.product-layout,.builder{grid-template-columns:1fr}.side{display:flex;padding:0}.side button{justify-content:center}.inspector{border-inline-end:0}.top{flex-wrap:wrap}main{padding:.7rem}.canvas{padding:.35rem}}
+.widgets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.4rem}.widgets button{min-height:42px}.inspector{max-height:82vh;overflow:auto}.editor-bar{border-top:3px solid #96265c}.builder .inspector{grid-column:2;grid-row:1;border-inline-end:0;border-inline-start:1px solid var(--line)}.builder{grid-template-columns:minmax(0,1fr) 255px;direction:ltr}.inspector,.canvas{direction:rtl}.canvas{grid-column:1;grid-row:1}.builder .inspector{grid-column:1}.canvas{grid-column:2}.builder{grid-template-columns:255px minmax(0,1fr)}.menu-row{display:grid;grid-template-columns:minmax(7rem,1fr) minmax(8rem,1fr) auto auto auto;gap:.4rem}.add-page{margin-bottom:1rem;max-width:40rem}
+@media(max-width:700px){.builder{grid-template-columns:1fr}.builder .inspector,.canvas{grid-column:1;grid-row:auto}.inspector{max-height:none}.menu-row{grid-template-columns:repeat(3,1fr)}.menu-row label{grid-column:1/-1}}
+.mobile-builder-tabs{display:none}
+@media(max-width:700px){
+  .top{padding:.65rem .75rem}.top .row{flex-wrap:nowrap}.side button{font-size:.83rem;padding:.6rem .25rem;min-height:46px}
+  button{min-height:44px}input:not([type=checkbox]),textarea,select{font-size:16px;min-height:44px}
+  .editor-bar{position:sticky;top:0;z-index:5}.editor-bar [aria-label="مقاس المعاينة"]{display:none}
+  .mobile-builder-tabs{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;background:white;padding:.45rem}
+  .mobile-builder-tabs [aria-pressed=true]{color:#fff;background:#96265c}
+  .builder[data-pane=preview] .inspector,.builder[data-pane=tools] .canvas{display:none}
+  .builder{min-height:0}.builder .inspector{padding:.7rem}.canvas{min-height:55vh}
+  #preview{height:65vh;min-height:350px}.table-wrap{border:0;background:none;overflow:visible}
+  .table-wrap table,.table-wrap tbody{display:block}.table-wrap thead{display:none}
+  .table-wrap tr{display:grid;grid-template-columns:1fr 1fr;gap:.35rem;padding:.75rem;margin-bottom:.55rem;border:1px solid var(--line);border-radius:6px;background:white!important}
+  .table-wrap td{border:0;padding:0;white-space:normal;overflow-wrap:anywhere}.table-wrap td::before{display:block;content:attr(data-label);font-size:.75rem;color:#52616a}
+  #page-rows td:first-child,#product-rows td:nth-child(2){font-weight:700}.table-photo{width:60px;height:60px}
+  #page-actions,#product-actions,#menu-actions{width:100%}#actions{display:flex;flex-wrap:nowrap}#actions button{flex:1}
+}
 </style>
 </head>
 <body>
 <header class="top"><strong>لوحة سنّة ستايل</strong><div class="row"><a href="/" target="_blank" rel="noopener">عرض المتجر</a><form method="post" action="/admin-logout"><button>تسجيل الخروج</button></form></div></header>
 <div class="shell">
-<nav class="side" aria-label="إدارة المتجر"><button type="button" data-tab="pages" aria-current="page">▤ الصفحات</button><button type="button" data-tab="products">▦ المنتجات</button></nav>
+<nav class="side" aria-label="إدارة المتجر"><button type="button" data-tab="pages" aria-current="page">▤ الصفحات</button><button type="button" data-tab="products">▦ المنتجات</button><button type="button" data-tab="layout">▤ الهيدر والفوتر</button></nav>
 <main>
 <p id="status" role="status"></p>
 <section id="pages">
-  <div class="row spread view-title"><h1>الصفحات</h1></div>
-  <div class="table-wrap"><table><thead><tr><th scope="col">الصفحة</th><th scope="col">الرابط</th><th scope="col">الإجراء</th></tr></thead><tbody>
-    <tr><td>الرئيسية</td><td><a href="/" target="_blank" rel="noopener">عرض الصفحة</a></td><td><button data-edit-page="index">تعديل بصري</button></td></tr>
-    <tr><td>المتجر</td><td><a href="/shop" target="_blank" rel="noopener">عرض الصفحة</a></td><td><button data-edit-page="shop">تعديل بصري</button></td></tr>
-    <tr><td>تواصلي معنا</td><td><a href="/contact" target="_blank" rel="noopener">عرض الصفحة</a></td><td><button data-edit-page="contact">تعديل بصري</button></td></tr>
-  </tbody></table></div>
+  <div class="row spread view-title"><h1>الصفحات</h1><button id="new-page" class="primary" disabled>إضافة صفحة</button></div>
+  <form id="new-page-form" class="panel add-page" hidden><label>اسم الصفحة<input id="new-title" maxlength="100" required></label><label>رابط الصفحة بالإنجليزية<input id="new-slug" dir="ltr" placeholder="new-collection" maxlength="60" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" required></label><div class="row"><button class="primary">إنشاء وتعديل</button><button id="cancel-page" type="button">إلغاء</button></div></form>
+  <div class="table-wrap"><table><thead><tr><th scope="col">الصفحة</th><th scope="col">الرابط</th><th scope="col">الإجراء</th></tr></thead><tbody id="page-rows"></tbody></table></div>
 </section>
+<section id="layout" hidden><div class="row view-title"><h1>الهيدر والفوتر</h1></div><div class="panel"><div class="row"><button data-layout="header">تعديل الهيدر</button><button data-layout="footer">تعديل الفوتر</button><button id="edit-menu">تعديل القائمة الرئيسية</button></div><div id="layout-actions"></div></div></section>
+<section id="menu-editor" hidden><div class="row view-title"><button data-tab="layout">الهيدر والفوتر</button><h1>القائمة الرئيسية</h1></div><div class="panel"><div id="menu-rows" class="stack"></div><div class="row"><button id="add-menu-link">إضافة رابط</button><div id="menu-actions"></div></div></div></section>
 <section id="page-editor" hidden>
-  <div class="row spread editor-bar"><div class="row"><button data-tab="pages">الصفحات</button><strong id="page-title"></strong></div><div class="row" aria-label="مقاس المعاينة"><button data-width="desktop" aria-pressed="true">كمبيوتر</button><button data-width="tablet" aria-pressed="false">تابلت</button><button data-width="mobile" aria-pressed="false">موبايل</button></div><div id="page-actions" class="row"></div></div>
-  <div class="builder"><aside class="inspector"><h2>خصائص العنصر</h2><input id="page" type="hidden"><label>العنصر<select id="element"></select></label><label>النص أو رابط الصورة<textarea id="content"></textarea></label><label id="element-link-field" hidden>وجهة الرابط<input id="element-link" type="text"></label><label>رفع صورة<input id="page-image" type="file" accept="image/*"></label><div class="fields"><label>لون النص<input id="ink" type="color"></label><label>الخلفية<input id="fill" type="color"></label><label>حجم الخط<input id="font" type="number" min="10" max="120"></label><label>المسافة الداخلية<input id="padding" type="number" min="0" max="150"></label></div><button id="apply">تطبيق على المعاينة</button><div class="row"><button id="up">رفع القسم ↑</button><button id="down">خفض القسم ↓</button></div></aside><div class="canvas"><iframe id="preview" title="معاينة الصفحة" sandbox="allow-same-origin"></iframe></div></div>
+  <div class="row spread editor-bar"><div class="row"><button id="editor-back">الصفحات</button><strong id="page-title"></strong></div><div class="row" aria-label="مقاس المعاينة"><button data-width="desktop" aria-pressed="true">كمبيوتر</button><button data-width="tablet" aria-pressed="false">تابلت</button><button data-width="mobile" aria-pressed="false">موبايل</button></div><div id="page-actions" class="row"></div></div>
+  <div class="builder"><aside class="inspector"><div id="widget-panel"><h2>إضافة عنصر</h2><div class="widgets"><button data-widget="section">＋ قسم</button><button data-widget="h2">عنوان</button><button data-widget="p">نص</button><button data-widget="img">صورة</button><button data-widget="a">زر</button><button data-widget="hr">فاصل</button><button data-widget="space">مسافة</button></div></div><h2>خصائص العنصر</h2><small>انقري على عنصر أو على مقبض «قسم» في المعاينة.</small><input id="page" type="hidden"><label>العنصر<select id="element"></select></label><label>النص أو رابط الصورة<textarea id="content"></textarea></label><label id="element-link-field" hidden>وجهة الرابط<input id="element-link" type="text"></label><label>رفع صورة<input id="page-image" type="file" accept="image/*"></label><div class="fields"><label>لون النص<input id="ink" type="color"></label><label>الخلفية<input id="fill" type="color"></label><label>حجم الخط<input id="font" type="number" min="10" max="120"></label><label>المسافة الداخلية<input id="padding" type="number" min="0" max="150"></label></div><button id="apply">تطبيق على المعاينة</button><div class="row" id="section-tools"><button id="duplicate-node">نسخ العنصر</button><button id="remove-node" class="danger">حذف العنصر</button><button id="up">رفع القسم ↑</button><button id="down">خفض القسم ↓</button></div></aside><div class="canvas"><iframe id="preview" title="معاينة الصفحة" sandbox="allow-same-origin"></iframe></div></div>
 </section>
 <section id="products" hidden>
   <div class="row spread view-title"><h1>المنتجات</h1><button id="new" class="primary">إضافة منتج</button></div>

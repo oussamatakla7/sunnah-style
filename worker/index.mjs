@@ -1,5 +1,7 @@
 const pagePaths = new Map([['/', 'index'], ['/index', 'index'], ['/index.html', 'index'],
   ['/shop', 'shop'], ['/shop.html', 'shop'], ['/contact', 'contact'], ['/contact.html', 'contact']]);
+const customPagePath = /^\/pages\/[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const isCustomPage = key => key.length <= 67 && customPagePath.test(key);
 const stateKey = 'store-state.json';
 const adminPaths = new Set(['/editor', '/editor.html', '/editor.js', '/api/admin/state']);
 const noCache = {'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff'};
@@ -12,8 +14,9 @@ async function getState(bucket) {
 }
 
 function validContent(content) {
-  return content && content.pages && Object.keys(content.pages).every(key =>
-    ['index', 'shop', 'contact'].includes(key) &&
+  return content && content.pages && typeof content.pages === 'object' && !Array.isArray(content.pages) &&
+    Object.keys(content.pages).every(key =>
+    (['index', 'shop', 'contact', 'layout-header', 'layout-footer'].includes(key) || isCustomPage(key)) &&
     typeof content.pages[key] === 'string' && content.pages[key].startsWith('<!doctype html>')) &&
     Array.isArray(content.products) && content.products.length <= 1000 &&
     new Set(content.products.map(item => item?.sku)).size === content.products.length &&
@@ -163,22 +166,35 @@ export default {
       if (path === '/api/admin/state' && request.method === 'PUT') return updateState(request, env.BUCKET);
       if (path === '/api/admin/state' && request.method === 'GET') {
         const {data} = await getState(env.BUCKET);
-        return json({revision: data.revision, draft: data.draft});
+        return json({revision: data.revision, draft: data.draft, publishedPages: Object.keys(data.live.pages)});
       }
     }
     if (!['GET', 'HEAD'].includes(request.method)) return json({error: 'method'}, 405);
     if (isAdmin) return asset(path === '/editor' ? '/editor.html' : path);
-    const page = pagePaths.get(path);
+    const custom = isCustomPage(path);
+    const page = custom ? path : pagePaths.get(path);
     if (page || path === '/catalog.js') {
       const {data} = await getState(env.BUCKET);
-      if (page && data.live.pages[page]) return new Response(data.live.pages[page], {
-        headers: {...noCache, 'Content-Type': 'text/html; charset=utf-8'}
-      });
+      if (page) {
+        const {pages} = data.live;
+        const response = pages[page] ? new Response(pages[page], {
+          headers: {...noCache, 'Content-Type': 'text/html; charset=utf-8'}
+        }) : asset(custom ? path : '/' + page + '.html');
+        if (!response.ok || (!pages['layout-header'] && !pages['layout-footer'])) return response;
+        const rewrite = new HTMLRewriter();
+        for (const part of ['header', 'footer']) {
+          const fragment = pages['layout-' + part]?.slice('<!doctype html>'.length);
+          if (fragment) rewrite.on(part === 'header' ? 'body > header.bar' : 'body > footer', {
+            element(node) { node.replace(fragment, {html:true}); }
+          });
+        }
+        return rewrite.transform(response);
+      }
       if (path === '/catalog.js' && data.live.products) return new Response(
         'window.storeCatalog = ' + JSON.stringify(data.live.products) + ';', {
           headers: {...noCache, 'Content-Type': 'application/javascript; charset=utf-8'}
         });
-      return asset(page ? '/' + page + '.html' : path);
+      return asset(path);
     }
     if (path.startsWith('/assets/')) return asset(path, {...noCache, 'Cache-Control': 'public, max-age=3600'});
     return ['/shop.js', '/style.css'].includes(path) ? asset(path) : new Response('Not found', {status: 404, headers: noCache});

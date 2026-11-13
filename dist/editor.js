@@ -5,7 +5,36 @@ let revision;
 let currentSku = '';
 let image = '';
 let activePage;
+let publishedPages = [];
+const basePages = {index:['الرئيسية','/'],shop:['المتجر','/shop'],contact:['تواصلي معنا','/contact']};
+const parsePage = html => new DOMParser().parseFromString(html, 'text/html');
+const sectionSelector = 'main > section, main > div, main > article';
+const layoutSelector = part => part === 'header' ? 'body > header.bar' : 'body > footer';
+const isLayout = () => activePage?.startsWith('layout-');
+const pageName = key => basePages[key]?.[0] || parsePage(pages[key]).title.split(' | Sunnah Style')[0];
+let openRequest = 0;
+let loadedPage;
+let originalLayout;
 const frame = $('preview');
+const builder = frame.closest('.builder');
+const mobileTabs = document.createElement('div');
+mobileTabs.className = 'mobile-builder-tabs';
+builder.before(mobileTabs);
+function mobilePane(pane) {
+  builder.dataset.pane = pane;
+  for (const button of mobileTabs.children) button.setAttribute('aria-pressed', String(button.dataset.pane === pane));
+}
+for (const [pane, label] of [['preview','المعاينة'],['tools','أدوات التعديل']]) {
+  const button = document.createElement('button');
+  button.textContent = label;
+  button.dataset.pane = pane;
+  button.onclick = () => mobilePane(pane);
+  mobileTabs.append(button);
+}
+mobilePane('preview');
+function labelCells(row, labels) {
+  labels.forEach((label, index) => { row.cells[index].dataset.label = label; });
+}
 const status = message => { $('status').textContent = message; };
 function upload(file, callback) {
   if (!file || !/^image\/(png|jpeg|webp|gif)$/.test(file.type)) {
@@ -36,47 +65,141 @@ function upload(file, callback) {
 let view = 'pages';
 function showView(next) {
   view = next;
-  for (const id of ['pages','products','page-editor','product-editor']) $(id).hidden = id !== next;
+  for (const id of ['pages','products','layout','menu-editor','page-editor','product-editor']) $(id).hidden = id !== next;
   for (const button of document.querySelectorAll('.side [data-tab]')) {
-    if (button.dataset.tab === (next.startsWith('product') ? 'products' : 'pages')) button.setAttribute('aria-current','page');
+    if (button.dataset.tab === (next.startsWith('product') ? 'products' : next === 'menu-editor' || next === 'layout' || (next === 'page-editor' && $('page').value.startsWith('layout-')) ? 'layout' : 'pages')) button.setAttribute('aria-current','page');
     else button.removeAttribute('aria-current');
   }
-  const target = {'page-editor':'page-actions','product-editor':'product-actions',products:'list-actions'}[next];
+  const target = {'page-editor':'page-actions','product-editor':'product-actions',products:'list-actions',layout:'layout-actions','menu-editor':'menu-actions'}[next];
   $('actions').hidden = !target;
   if (target) $(target).append($('actions'));
 }
 for (const button of document.querySelectorAll('[data-tab]')) button.onclick = () => showView(button.dataset.tab);
-for (const button of document.querySelectorAll('[data-edit-page]')) button.onclick = () => {
+function editPage(key, title) {
   if (!pages) return;
-  $('page').value = button.dataset.editPage;
-  $('page-title').textContent = button.closest('tr').cells[0].textContent;
+  $('page').value = key;
+  $('page-title').textContent = title;
+  $('editor-back').textContent = key.startsWith('layout-') ? 'الهيدر والفوتر' : 'الصفحات';
   showView('page-editor');
+  mobilePane(key.startsWith('/pages/') && !parsePage(pages[key]).querySelector('main').children.length ? 'tools' : 'preview');
   openPage();
+}
+$('editor-back').onclick = () => showView(isLayout() ? 'layout' : 'pages');
+function listPages() {
+  $('page-rows').replaceChildren(...[...Object.keys(basePages), ...Object.keys(pages).filter(key => key.startsWith('/pages/'))].map(key => {
+    const row = document.createElement('tr');
+    row.insertCell().textContent = pageName(key);
+    const link = row.insertCell();
+    if (basePages[key] || publishedPages.includes(key)) {
+      const a = document.createElement('a');
+      Object.assign(a, {href:basePages[key]?.[1] || key, target:'_blank', rel:'noopener', textContent:'عرض الصفحة'});
+      link.append(a);
+    } else link.textContent = key + ' · مسودّة';
+    const edit = document.createElement('button');
+    edit.textContent = 'تعديل بصري';
+    edit.onclick = () => editPage(key, pageName(key));
+    row.insertCell().append(edit);
+    labelCells(row, ['','الرابط','']);
+    return row;
+  }));
+}
+$('new-page').onclick = () => { $('new-page-form').hidden = false; $('new-title').focus(); };
+$('cancel-page').onclick = () => { $('new-page-form').hidden = true; };
+async function sourceFor(key) {
+  if (pages[key]) return pages[key];
+  const response = await fetch('/' + key + '.html');
+  if (!response.ok) throw Error();
+  return response.text();
+}
+$('new-page-form').onsubmit = async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const name = $('new-title').value.trim();
+  const key = '/pages/' + $('new-slug').value;
+  if (!name || Object.hasOwn(pages, key)) return status('أدخلي اسمًا ورابطًا غير مستخدم.');
+  const submit = form.querySelector('button');
+  submit.disabled = true;
+  try {
+    const doc = parsePage(await sourceFor('contact'));
+    doc.title = name + ' | Sunnah Style';
+    doc.querySelector('meta[name=description]')?.remove();
+    doc.querySelector('main').replaceChildren();
+    doc.querySelectorAll('[aria-current=page]').forEach(node => node.removeAttribute('aria-current'));
+    const base = doc.createElement('base');
+    base.href = '/';
+    doc.head.prepend(base);
+    pages[key] = '<!doctype html>\n' + doc.documentElement.outerHTML;
+    form.reset();
+    form.hidden = true;
+    listPages();
+    editPage(key, name);
+    status('أضيفت الصفحة. اختاري العناصر لبنائها ثم احفظي المسودّة أو انشريها.');
+  } catch { status('تعذّر إنشاء الصفحة.'); }
+  finally { submit.disabled = false; }
 };
+for (const button of document.querySelectorAll('[data-layout]')) button.onclick = () =>
+  editPage('layout-' + button.dataset.layout, button.textContent);
 for (const button of document.querySelectorAll('[data-width]')) button.onclick = () => {
   frame.dataset.width = button.dataset.width;
   for (const choice of document.querySelectorAll('[data-width]')) choice.setAttribute('aria-pressed', String(choice === button));
 };
 
-const nodes = () => [...frame.contentDocument.querySelectorAll(
-  'header, main > section, footer, main h1, main h2, main p:not(:empty), main .button, main img, main .campaign, main .location-map'
-)];
+const nodes = () => {
+  const doc = frame.contentDocument;
+  const root = isLayout() ? doc.querySelector(layoutSelector(activePage.slice(7))) : doc.querySelector('main');
+  if (!root) return [];
+  const targets = 'h1,h2,h3,h4,p,a:not(:has(img,svg)),img,iframe,hr,[data-builder-widget],.campaign';
+  return [...(isLayout() ? [root] : root.querySelectorAll(sectionSelector)), ...root.querySelectorAll(targets)];
+};
+let highlighted;
+let hoverNode;
+function mark(node, style) {
+  if (!node) return;
+  node.style.setProperty('outline', style);
+  node.style.setProperty('outline-offset','-2px');
+}
+const originalOutlines = new WeakMap();
+function outline(node, color) {
+  if (!node) return;
+  if (!originalOutlines.has(node)) originalOutlines.set(node, node.getAttribute('style'));
+  mark(node, '2px solid ' + color);
+}
+function restoreOutline(node) {
+  if (!node || !originalOutlines.has(node)) return;
+  const old = originalOutlines.get(node);
+  if (old === null) node.removeAttribute('style');
+  else node.setAttribute('style',old);
+  originalOutlines.delete(node);
+}
+function clearOutlines() {
+  restoreOutline(hoverNode);
+  restoreOutline(highlighted);
+}
+function highlight() {
+  clearOutlines();
+  hoverNode = null;
+  highlighted = selectedNode();
+  outline(highlighted, '#a02562');
+}
 function listElements(selected) {
   const items = nodes();
   $('element').replaceChildren(...items.map((node, index) => {
-    const label = {HEADER:'الهيدر',FOOTER:'الفوتر',SECTION:'قسم',IMG:'صورة',IFRAME:'الخريطة'}[node.tagName];
-    return new Option(label || (node.classList.contains('campaign') ? 'صورة الغلاف' : node.textContent.trim().slice(0, 60)), index);
+    const label = {HR:'فاصل',HEADER:'الهيدر',FOOTER:'الفوتر',SECTION:'قسم',IMG:'صورة',IFRAME:'الخريطة'}[node.tagName];
+    return new Option(label || (node.classList.contains('campaign') ? 'صورة الغلاف' : node.textContent.trim().slice(0, 60) || 'عنصر'), index);
   }));
   if (selected) $('element').value = items.indexOf(selected);
   loadElement();
 }
-const selectedNode = () => nodes()[Number($('element').value)];
+const selectedNode = () => nodes()[$('element').selectedIndex];
 function loadElement() {
   const node = selectedNode();
+  highlight();
+  $('apply').disabled = !node;
+  $('section-tools').hidden = isLayout() || !node;
   if (!node) return;
-  const isSection = node.matches('header,section,footer');
+  const isSection = node.matches('header,footer,' + sectionSelector + ',hr,[data-builder-widget=space]');
   const isCover = node.classList.contains('campaign');
-  $('content').disabled = isSection || isCover;
+  $('content').disabled = isSection || isCover || node.matches('a:has(*), p:has(*)');
   $('content').value = isSection || isCover ? '' : node.matches('img,iframe') ? node.getAttribute('src') : node.textContent.trim();
   $('element-link-field').hidden = !node.matches('a');
   $('element-link').value = node.getAttribute('href') || '';
@@ -85,43 +208,170 @@ function loadElement() {
   const hex = value => '#' + (value.match(/\d+/g) || []).slice(0,3).map(n => Number(n).toString(16).padStart(2,'0')).join('');
   $('ink').value = hex(style.color);
   $('fill').value = hex(style.backgroundColor);
-  $('font').value = '';
-  $('padding').value = '';
+  $('font').value = parseFloat(node.style.fontSize) || '';
+  $('padding').value = parseFloat(node.style.padding) || '';
+  $('page-image').value = '';
   delete $('ink').dataset.changed;
   delete $('fill').dataset.changed;
 }
 for (const id of ['ink','fill']) $(id).oninput = () => { $(id).dataset.changed = '1'; };
-function pageSource() {
-  return '<!doctype html>\n' + frame.contentDocument.documentElement.outerHTML;
-}
 function savePage() {
-  pages[activePage] = pageSource();
+  clearOutlines();
+  const doc = frame.contentDocument;
+  const copy = doc.documentElement.cloneNode(true);
+  delete copy.dataset.editorRequest;
+  copy.querySelectorAll('[data-editor-only]').forEach(node => node.remove());
+  if (!isLayout() && originalLayout) {
+    for (const part of ['header','footer']) {
+      const original = originalLayout.querySelector(layoutSelector(part));
+      if (original) copy.querySelector(layoutSelector(part))?.replaceWith(original.cloneNode(true));
+    }
+  }
+  const target = isLayout() ? copy.querySelector(layoutSelector(activePage.slice(7))) : copy;
+  pages[activePage] = '<!doctype html>\n' + target.outerHTML;
+  outline(highlighted, '#a02562');
   status('تعديلات بانتظار الحفظ.');
 }
 async function openPage() {
   const page = $('page').value;
+  const request = ++openRequest;
+  activePage = page;
+  loadedPage = null;
+  originalLayout = null;
+  $('widget-panel').hidden = true;
+  $('apply').disabled = true;
   try {
-    const response = pages[page] ? null : await fetch(page + '.html');
-    if (response && !response.ok) throw Error();
-    const html = pages[page] || await response.text();
-    if ($('page').value !== page) return;
-    activePage = page;
-    frame.srcdoc = html;
-  } catch { status('تعذّر تحميل الصفحة للمعاينة.'); }
+    let html;
+    let original;
+    if (page.startsWith('layout-') || Object.keys(pages).some(key => key.startsWith('layout-'))) {
+      const doc = parsePage(await sourceFor(page.startsWith('layout-') ? 'index' : page));
+      original = doc.cloneNode(true);
+      for (const part of ['header','footer']) {
+        const fragment = pages['layout-' + part];
+        if (!fragment) continue;
+        const template = doc.createElement('template');
+        template.innerHTML = fragment.slice('<!doctype html>'.length);
+        doc.querySelector(layoutSelector(part))?.replaceWith(template.content);
+      }
+      if (page.startsWith('layout-')) {
+        doc.body.replaceChildren(doc.querySelector(layoutSelector(page.slice(7))));
+      }
+      html = '<!doctype html>\n' + doc.documentElement.outerHTML;
+    } else html = await sourceFor(page);
+    if (request === openRequest) {
+      originalLayout = original;
+      const doc = parsePage(html);
+      doc.documentElement.dataset.editorRequest = String(request);
+      frame.srcdoc = '<!doctype html>\n' + doc.documentElement.outerHTML;
+    }
+  } catch { if (request === openRequest) status('تعذّر تحميل الصفحة للمعاينة.'); }
+}
+function addHandles() {
+  const doc = frame.contentDocument;
+  doc.querySelectorAll('[data-editor-handle]').forEach(node => node.remove());
+  for (const section of doc.querySelectorAll(sectionSelector)) {
+    const handle = doc.createElement('button');
+    handle.type = 'button';
+    handle.textContent = 'تعديل القسم';
+    handle.dataset.editorOnly = '';
+    handle.dataset.editorHandle = '';
+    Object.assign(handle.style, {display:'block', margin:'0', padding:'3px 8px', border:'0', font:'12px system-ui', color:'white', background:'#96265c', position:'absolute', zIndex:'3'});
+    handle.onclick = event => {
+      event.stopPropagation();
+      listElements(section);
+      if (matchMedia('(max-width:700px)').matches) mobilePane('tools');
+    };
+    section.prepend(handle);
+  }
 }
 frame.onload = () => {
+  const doc = frame.contentDocument;
+  if (!activePage || doc?.documentElement.dataset.editorRequest !== String(openRequest)) return;
+  loadedPage = activePage;
+  clearOutlines();
+  highlighted = hoverNode = null;
+  $('widget-panel').hidden = isLayout();
+  if (!isLayout()) addHandles();
   listElements();
-  frame.contentDocument.addEventListener('click', event => {
+  doc.addEventListener('click', event => {
     if (event.target.closest('a,button,summary')) event.preventDefault();
-    const node = nodes().findLast(item => item.contains(event.target));
-    if (node) listElements(node);
+    const node = nodes().filter(item => item.contains(event.target)).reduce((closest, item) =>
+      !closest || closest.contains(item) ? item : closest, null);
+    if (node) {
+      listElements(node);
+      if (matchMedia('(max-width:700px)').matches) mobilePane('tools');
+    }
   });
+  doc.addEventListener('submit', event => event.preventDefault());
+  doc.addEventListener('dragover', event => {
+    if (!isLayout() && event.target.closest('main')) event.preventDefault();
+  });
+  doc.addEventListener('drop', event => {
+    if (isLayout() || !event.target.closest('main')) return;
+    event.preventDefault();
+    const type = event.dataTransfer.getData('text/plain').split(':');
+    if (type[0] === 'sunnah-widget' && ['section','h2','p','img','a','hr','space'].includes(type[1])) {
+      insertWidget(type[1], event.target.closest('[data-builder-widget], ' + sectionSelector));
+    }
+  });
+};
+function insertWidget(type, target = selectedNode()) {
+  const doc = frame.contentDocument;
+  const main = doc.querySelector('main');
+  if (!main || isLayout() || loadedPage !== activePage) return;
+  let section = target?.closest(sectionSelector);
+  if (!section || type === 'section') {
+    const next = doc.createElement('section');
+    next.dataset.builderWidget = 'section';
+    next.style.cssText = 'padding:32px max(5vw, 16px);min-height:70px';
+    if (section) section.after(next);
+    else main.append(next);
+    section = next;
+  }
+  let node = section;
+  if (type !== 'section') {
+    node = doc.createElement(type === 'space' ? 'div' : type);
+    node.dataset.builderWidget = type;
+    const content = {h2:'عنوان جديد',p:'اكتبي النص هنا',a:'تسوّقي الآن'};
+    if (content[type]) node.textContent = content[type];
+    if (type === 'a') { node.className = 'button'; node.href = '/shop'; }
+    if (type === 'img') { node.src = '/assets/logo.jpg'; node.alt = ''; node.style.cssText = 'max-width:100%;height:auto'; }
+    if (type === 'space') node.style.padding = '24px';
+    if (target?.matches('[data-builder-widget]:not(section)') && target.parentElement === section) target.after(node);
+    else section.append(node);
+  }
+  addHandles();
+  listElements(node);
+  savePage();
+}
+for (const button of document.querySelectorAll('[data-widget]')) {
+  button.onclick = () => insertWidget(button.dataset.widget);
+  button.draggable = true;
+  button.ondragstart = event => event.dataTransfer.setData('text/plain', 'sunnah-widget:' + button.dataset.widget);
+}
+for (const id of ['duplicate-node','remove-node']) $(id).onclick = () => {
+  const node = selectedNode();
+  if (!node || isLayout() || !node.closest('main')) return;
+  clearOutlines();
+  if (id === 'remove-node') {
+    if (!confirm('حذف هذا العنصر من الصفحة؟')) { highlight(); return; }
+    node.remove();
+    listElements();
+  } else {
+    const copy = node.cloneNode(true);
+    copy.removeAttribute('id');
+    copy.querySelectorAll('[id]').forEach(child => child.removeAttribute('id'));
+    node.after(copy);
+    addHandles();
+    listElements(copy);
+  }
+  savePage();
 };
 $('element').onchange = loadElement;
 $('page').onchange = openPage;
 $('apply').onclick = () => {
   const node = selectedNode();
-  if (!node) return;
+  if (!node || loadedPage !== activePage) return;
   if (node.matches('a')) {
     const href = $('element-link').value.trim();
     try {
@@ -136,13 +386,14 @@ $('apply').onclick = () => {
         status('أدخلي رابط خريطة Google صالحًا.');
         return;
       }
-      if (node.matches('img') && !/^(https:\/\/|assets\/|data:image\/jpeg;base64,)/.test(value)) {
+      if (node.matches('img') && !/^(https:\/\/|\/?assets\/|data:image\/jpeg;base64,)/.test(value)) {
         status('أدخلي رابط صورة صالحًا.');
         return;
       }
       node.setAttribute('src', value);
     } else node.textContent = value;
   }
+  clearOutlines();
   if ($('ink').dataset.changed) node.style.color = $('ink').value;
   if ($('fill').dataset.changed) node.style.backgroundColor = $('fill').value;
   if ($('font').value) node.style.fontSize = $('font').value + 'px';
@@ -154,6 +405,7 @@ $('page-image').onchange = event => {
   const page = activePage;
   upload(event.target.files[0], data => {
     if (!node?.isConnected || page !== activePage) return;
+    clearOutlines();
     if (node.matches('img')) node.setAttribute('src', data);
     else node.style.backgroundImage = 'url("' + data + '")';
     savePage();
@@ -161,7 +413,7 @@ $('page-image').onchange = event => {
   });
 };
 for (const direction of ['up','down']) $(direction).onclick = () => {
-  const section = selectedNode()?.closest('main > section');
+  const section = selectedNode()?.closest(sectionSelector);
   const sibling = direction === 'up' ? section?.previousElementSibling : section?.nextElementSibling;
   if (!sibling) return;
   if (direction === 'up') sibling.before(section);
@@ -219,6 +471,7 @@ function listProducts() {
     edit.setAttribute('aria-label','تعديل '+item.name);
     edit.onclick = () => openProduct(item.sku);
     row.insertCell().append(edit);
+    labelCells(row, ['','','الرمز','الفئة','السعر','الكمية','']);
     return row;
   }));
 }
@@ -266,6 +519,50 @@ $('delete').onclick = () => {
   listProducts();
 };
 
+let menuHeader;
+function appendMenuRow(text = '', href = '') {
+  const row = document.createElement('div');
+  row.className = 'menu-row';
+  row.innerHTML = '<label>اسم الرابط<input required maxlength="100"></label><label>وجهة الرابط<input dir="ltr" required></label><button aria-label="رفع الرابط">↑</button><button aria-label="خفض الرابط">↓</button><button class="danger">حذف</button>';
+  const [name, url] = row.querySelectorAll('input');
+  name.value = text;
+  url.value = href;
+  const [up,down,remove] = row.querySelectorAll('button');
+  up.onclick = () => row.previousElementSibling?.before(row);
+  down.onclick = () => row.nextElementSibling?.after(row);
+  remove.onclick = () => row.remove();
+  $('menu-rows').append(row);
+}
+$('add-menu-link').onclick = () => appendMenuRow();
+$('edit-menu').onclick = async () => {
+  if (!pages) return;
+  try {
+    const html = pages['layout-header'] || await sourceFor('index');
+    menuHeader = parsePage(html).querySelector(layoutSelector('header'));
+    menuHeader.querySelectorAll('[aria-current]').forEach(node => node.removeAttribute('aria-current'));
+    $('menu-rows').replaceChildren();
+    for (const a of menuHeader.querySelectorAll('#page-nav a')) appendMenuRow(a.textContent, a.getAttribute('href'));
+    showView('menu-editor');
+  } catch { status('تعذّر تحميل القائمة.'); }
+};
+function saveMenu() {
+  const rows = [...$('menu-rows').children];
+  const links = [];
+  for (const row of rows) {
+    const [name,url] = [...row.querySelectorAll('input')].map(input => input.value.trim());
+    try {
+      if (!name || !url || !['http:','https:','mailto:','tel:'].includes(new URL(url, location.origin).protocol)) throw Error();
+    } catch { status('أدخلي اسمًا ووجهة صالحة لكل رابط.'); return false; }
+    const link = menuHeader.ownerDocument.createElement('a');
+    link.textContent = name;
+    link.setAttribute('href', url);
+    links.push(link);
+  }
+  menuHeader.querySelector('#page-nav').replaceChildren(...links);
+  pages['layout-header'] = '<!doctype html>\n' + menuHeader.outerHTML;
+  return true;
+}
+
 async function loadState() {
   const response = await fetch('/api/admin/state');
   if (!response.ok) throw Error();
@@ -273,10 +570,14 @@ async function loadState() {
   revision = state.revision;
   pages = state.draft.pages;
   products = state.draft.products ?? window.storeCatalog;
+  publishedPages = state.publishedPages || [];
+  listPages();
   listProducts();
+  $('new-page').disabled = false;
   $('save').disabled = $('publish').disabled = false;
 }
 async function commit(action) {
+  if (view === 'menu-editor' && !saveMenu()) return;
   if (view === 'product-editor' && (!$('product-form').reportValidity() || !$('product-form').onsubmit(new Event('submit')))) return;
   $('save').disabled = $('publish').disabled = true;
   try {
@@ -295,6 +596,7 @@ async function commit(action) {
     }
     if (!response.ok) throw Error();
     revision = (await response.json()).revision;
+    if (action === 'publish') { publishedPages = Object.keys(pages); listPages(); }
     status(action === 'publish' ? 'نُشرت التعديلات على المتجر.' : 'حُفظت المسودة.');
   } catch { status('تعذّر حفظ التعديلات. تحقّقي من تسجيل الدخول وحاولي مجددًا.'); }
   finally { $('save').disabled = $('publish').disabled = false; }
