@@ -178,3 +178,21 @@ html[dir="ltr"] .campaign { transform: scaleX(-1); }
   .footer-identity { grid-column:1/-1; border-bottom:1px solid #dfc48f55; padding-bottom:1.15rem; }
   .footer-links a, .footer-links p { font-size:.84rem; }
 }
+@media (prefers-reduced-motion: no-preference) {
+  .hero-copy > *, .section-title > * { animation: storefront-enter 450ms ease-out both; }
+  .hero-copy .intro { animation-delay: 65ms; }
+  .hero-copy .button { animation-delay: 125ms; }
+  dialog[open], .header-search[open] .header-search-form,
+  .bar:has(.mobile-menu[aria-expanded="true"]) nav { animation: storefront-enter 180ms ease-out both; }
+  .button, .product-info button, .social-icons a { transition: background-color 180ms, color 180ms, transform 180ms; }
+  .button:active, .product-info button:active { transform: scale(.98); }
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .category-links img, .product-art img { transition: transform 280ms ease-out; }
+  .product-art { overflow: hidden; }
+  .category-links a:hover img, .product:hover .product-art img { transform: scale(1.035); }
+}
+@keyframes storefront-enter {
+  from { transform: translateY(7px); }
+  to { transform: translateY(0); }
+}

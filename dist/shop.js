@@ -23,23 +23,23 @@ const translations = {
   "توتي": "Berry",
   "تركواز": "Turquoise",
   "One Size": "One size",
-  "ما لقينا موديلات مطابقة.": "No matching styles.",
+  "لم نجد قطعًا مطابقة لبحثكِ.": "No matching styles.",
   "تفاصيل": "Details for",
-  "شوفي التفاصيل": "View details",
-  "السعر والتوفّر بيتأكدوا عبر واتساب.": "Price and availability are confirmed on WhatsApp.",
+  "عرض التفاصيل": "View details",
+  "نؤكّد السعر والتوفّر عبر واتساب.": "Price and availability are confirmed on WhatsApp.",
   "اللون": "Color",
   "القياس": "Size",
-  "أضيفي للحقيبة": "Add to bag",
-  "انضاف الموديل للحقيبة": "Added to your bag",
+  "أضيفي إلى السلة": "Add to bag",
+  "أُضيفت القطعة إلى السلة": "Added to your bag",
   "إزالة القطعة": "Remove item",
   "خفّضي الكمية": "Decrease quantity",
   "زيدي الكمية": "Increase quantity",
-  "الحقيبة بعدها فاضية.": "Your bag is empty.",
+  "سلة التسوّق فارغة.": "Your bag is empty.",
   "السلام عليكم فريق سنّة ستايل، بدي أطلب هيدا الأوردر:": "Assalamu alaikum Sunnah Style team, I would like to place this order:",
   "قياس": "Size",
   "الكمية": "Quantity",
-  "أرسلي طلبكِ عبر واتساب": "Send your order on WhatsApp",
-  "منأكّد السعر والتوفّر معكِ على واتساب قبل الدفع.": "We confirm the price and availability on WhatsApp before payment.",
+  "إرسال الطلب عبر واتساب": "Send your order on WhatsApp",
+  "نؤكّد السعر والتوفّر عبر واتساب قبل الدفع.": "We confirm the price and availability on WhatsApp before payment.",
   "يُحدّد عبر واتساب": "Confirm on WhatsApp"
 };
 const localize = text => english ? translations[text] ?? text : text;
@@ -115,7 +115,7 @@ function renderCatalog() {
     && [product.name, product.sku, categories[product.category], ...product.variants.flatMap(([color]) => [color[0], localize(color[0])])]
       .some(value => value.toLowerCase().includes(query))
   );
-  $('results').textContent = visible.length ? `${visible.length} ${english ? (visible.length === 1 ? "style" : "styles") : "موديل"}` : localize('ما لقينا موديلات مطابقة.');
+  $('results').textContent = visible.length ? `${visible.length} ${english ? (visible.length === 1 ? "style" : "styles") : "موديل"}` : localize('لم نجد قطعًا مطابقة لبحثكِ.');
   products.innerHTML = visible.map(product => `
     <article class="product">
       <div class="product-art"><img src="assets/products/${product.sku}.jpg" alt="" width="384" height="384" loading="lazy"></div><p class="illustrative-photo">${photoLabel}</p>
@@ -125,7 +125,7 @@ function renderCatalog() {
         <div class="swatches" aria-label="${product.variants.map(([color]) => localize(color[0])).join(english ? ', ' : '، ')}">
           ${product.variants.map(([color]) => `<i title="${localize(color[0])}" style="background:${color[1]}"></i>`).join('')}
         </div>
-        <button data-product="${product.sku}" aria-label="${localize('تفاصيل')} ${product.name}">${localize('شوفي التفاصيل')}</button>
+        <button data-product="${product.sku}" aria-label="${localize('تفاصيل')} ${product.name}">${localize('عرض التفاصيل')}</button>
       </div>
     </article>`).join('');
 }
@@ -134,11 +134,11 @@ function showProduct(product) {
   $('detail-body').innerHTML = `
     <p><bdi>${product.sku}</bdi> · ${categories[product.category]}</p>
     <h2 id="detail-title">${product.name}</h2><img class="detail-photo" src="assets/products/${product.sku}.jpg" alt="" width="384" height="384"><p class="illustrative-photo">${photoLabel}</p><p class="item-price"><bdi>${money(temporaryPrice)}</bdi> <small>${temporaryLabel}</small></p>
-    <p>${localize('السعر والتوفّر بيتأكدوا عبر واتساب.')}</p>
+    <p>${localize('نؤكّد السعر والتوفّر عبر واتساب.')}</p>
     <form id="add-form">
       <label>${localize('اللون')}<select id="color">${product.variants.map(([color], i) => `<option value="${i}">${localize(color[0])}</option>`).join('')}</select></label>
       <label>${localize('القياس')}<select id="size"></select></label>
-      <button type="submit" class="button">${localize('أضيفي للحقيبة')}</button>
+      <button type="submit" class="button">${localize('أضيفي إلى السلة')}</button>
     </form>`;
   const color = $('color');
   const size = $('size');
@@ -156,7 +156,7 @@ function showProduct(product) {
     else bag.push({sku: product.sku, color: colorIndex, size: size.value, quantity: 1});
     saveBag();
     detail.close();
-    $('toast').textContent = localize('انضاف الموديل للحقيبة');
+    $('toast').textContent = localize('أُضيفت القطعة إلى السلة');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => { $('toast').textContent = ''; }, 2600);
   });
@@ -171,7 +171,7 @@ function renderCart(focusIndex, focusAction) {
   $('cart-lines').innerHTML = lines.length ? lines.map((item, index) => `
     <div class="cart-line"><div><strong>${item.name}</strong><small>${item.colorName} · <bdi>${localize(item.size)}</bdi> · <bdi>${money(temporaryPrice * item.quantity)}</bdi></small></div>
       <div class="quantity"><button data-index="${index}" data-action="minus" aria-label="${item.quantity === 1 ? localize('إزالة القطعة') : localize('خفّضي الكمية')}">−</button><span>${item.quantity}</span><button data-index="${index}" data-action="plus" aria-label="${localize('زيدي الكمية')}" ${item.quantity === 99 ? 'disabled' : ''}>+</button></div>
-    </div>`).join('') : `<p>${localize('الحقيبة بعدها فاضية.')}</p>`;
+    </div>`).join('') : `<p>${localize('سلة التسوّق فارغة.')}</p>`;
   if (!lines.length) {
     $('checkout').replaceChildren();
     if (focusAction) cart.querySelector('[data-close]').focus();
@@ -186,9 +186,9 @@ function renderCart(focusIndex, focusAction) {
   link.href = whatsapp + '?text=' + encodeURIComponent(message);
   link.target = '_blank';
   link.rel = 'noopener';
-  link.textContent = localize('أرسلي طلبكِ عبر واتساب');
+  link.textContent = localize('إرسال الطلب عبر واتساب');
   const note = document.createElement('p');
-  note.textContent = localize('منأكّد السعر والتوفّر معكِ على واتساب قبل الدفع.');
+  note.textContent = localize('نؤكّد السعر والتوفّر عبر واتساب قبل الدفع.');
   const summary = document.createElement('p');
   summary.className = 'cart-total';
   const amount = document.createElement('bdi');
