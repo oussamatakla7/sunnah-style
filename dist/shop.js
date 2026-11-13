@@ -1,5 +1,6 @@
 const english = document.documentElement.lang === 'en';
-const temporaryPrice = 100;
+const sizeLabel = value => value === "One Size" ? "قياس موحّد" : String(value);
+const escapeHtml = value => String(value ?? "").replace(/[&<>"\x27]/g, char => "&#" + char.charCodeAt(0) + ";");
 const money = amount => '$' + amount.toLocaleString('en-US');
 const temporaryLabel = english ? 'Temporary price' : 'سعر مؤقّت';
 const totalLabel = english ? 'Estimated total' : 'المجموع التقديري';
@@ -44,35 +45,7 @@ const translations = {
 const localize = text => english ? translations[text] ?? text : text;
 const englishNames = ["Plain zip dress","Designed zip dress","Orange evening dress","Evening dress with bodice detail","Evening dress without chiffon","Chiffon evening dress","Plain dress with bodice detail","Flared chiffon dress","Loose everyday dress","Bow dress","Button-front dress","Button dress with detailing","Gathered dress with sleeves","Sport skirt and jacket set"];
 const categories = ['الكل', 'فساتين سهرة', 'فساتين يومية', 'أطقم رياضية'].map(localize);
-const black = ['أسود', '#242323'];
-const navy = ['كحلي', '#26364b'];
-const olive = ['زيتي', '#646a47'];
-const paleOlive = ['زيتي فاتح', '#9da27d'];
-const burgundy = ['بوردو', '#733445'];
-const beige = ['بيج', '#d8c3a3'];
-const brown = ['بني', '#76523e'];
-const pink = ['زهري', '#c9829c'];
-const oneSize = ['One Size'];
-
-const catalog = [
-  [1, 1, 'فستان سادة بسحّاب', [[black, [38, 40, 44]], [['موف', '#866688'], [40]]]],
-  [2, 1, 'فستان بسحّاب مع تصميم', [[olive, [40, 44]], [burgundy, [40, 42]]]],
-  [3, 1, 'فستان سهرة برتقالي', [[['برتقالي', '#b8633c'], [40, 46]]]],
-  [4, 1, 'فستان بتصميم عند الصدر', [[pink], [black, [38, 40]], [navy, [42]]]],
-  [5, 1, 'فستان سهرة بلا شيفون', [[black, [42]]]],
-  [6, 1, 'فستان سهرة مع شيفون', [[navy, [38, 40, 42]]]],
-  [7, 1, 'فستان سادة بتصميم عند الصدر', [[black, [40]]]],
-  [8, 1, 'فستان شيفون كلوش', [[black, [38, 42, 44, 46, 48, 52]], [navy, [38, 46, 48, 50, 52]], [brown, [48, 50, 52]]]],
-  [9, 2, 'فستان يومي واسع', [[black, [42]], [beige, oneSize]]],
-  [10, 2, 'فستان مع ربطة', [[black, [1, 2, 3]], [navy, [1, 2, 3]], [brown, [1, 2]], [burgundy, [2, 3]], [paleOlive, [2, 3]]]],
-  [11, 2, 'فستان بأزرار أمامية', [[black, [1, 2]], [beige, [2, 3]], [['كافا', '#a38874'], [2, 3]], [paleOlive, [2, 3]], [['توتي', '#864f64'], [1, 2]]]],
-  [12, 2, 'فستان بأزرار مع تصميم', [[black], [brown], [beige, [2, 3]], [paleOlive, [2, 3]]]],
-  [13, 2, 'فستان مكشكش مع أكمام', [black, burgundy, beige, olive, ['تركواز', '#408782']].map(color => [color, [38, 40, 42, 44]])],
-  [14, 3, 'طقم رياضي بتنورة وجاكيت', [brown, olive, black].map(color => [color, oneSize])],
-].map(([number, category, name, variants]) => ({
-  sku: 'SSBM' + String(number).padStart(4, '0'), category, name: english ? englishNames[number - 1] : name, variants,
-}));
-
+const catalog = window.storeCatalog;
 const $ = id => document.getElementById(id);
 const products = $('products');
 const categoriesPanel = $('categories');
@@ -121,14 +94,14 @@ function renderCatalog() {
 function renderProducts(container, items) {
   container.innerHTML = items.map(product => `
     <article class="product">
-      <div class="product-art"><img src="assets/products/${product.sku}.jpg" alt="" width="384" height="384" loading="lazy"></div>
+      <div class="product-art"><img src="${escapeHtml(product.image)}" alt="" width="384" height="384" loading="lazy"></div>
       <div class="product-info">
         <small dir="ltr">${product.sku}</small>
-        <h3>${product.name}</h3><p class="item-price"><bdi>${money(temporaryPrice)}</bdi> <small>${temporaryLabel}</small></p>
+        <h3>${escapeHtml(product.name)}</h3><p class="item-price"><bdi>${money(product.price)}</bdi> ${product.temporary ? '<small>' + temporaryLabel + '</small>' : ''}</p>
         <div class="swatches" aria-label="${product.variants.map(([color]) => localize(color[0])).join(english ? ', ' : '، ')}">
-          ${product.variants.map(([color]) => `<i title="${localize(color[0])}" style="background:${color[1]}"></i>`).join('')}
+          ${product.variants.map(([color]) => `<i title="${escapeHtml(localize(color[0]))}" style="background:${color[1]}"></i>`).join('')}
         </div>
-        <button data-product="${product.sku}" aria-label="${localize('تفاصيل')} ${product.name}">${localize('عرض التفاصيل')}</button>
+        <button data-product="${product.sku}" aria-label="${localize('تفاصيل')} ${escapeHtml(product.name)}">${localize('عرض التفاصيل')}</button>
       </div>
     </article>`).join('');
 }
@@ -136,10 +109,11 @@ function renderProducts(container, items) {
 function showProduct(product) {
   $('detail-body').innerHTML = `
     <p><bdi>${product.sku}</bdi> · ${categories[product.category]}</p>
-    <h2 id="detail-title">${product.name}</h2><img class="detail-photo" src="assets/products/${product.sku}.jpg" alt="" width="384" height="384"><p class="item-price"><bdi>${money(temporaryPrice)}</bdi> <small>${temporaryLabel}</small></p>
+    <h2 id="detail-title">${escapeHtml(product.name)}</h2><img class="detail-photo" src="${escapeHtml(product.image)}" alt="" width="384" height="384"><p class="item-price"><bdi>${money(product.price)}</bdi> ${product.temporary ? '<small>' + temporaryLabel + '</small>' : ''}</p>
     <p>${localize('نؤكّد السعر والتوفّر عبر واتساب.')}</p>
+    ${product.description ? "<p>" + escapeHtml(product.description) + "</p>" : ""}
     <form id="add-form">
-      <fieldset class="variant-picker"><legend>اللون</legend><div class="variant-options" id="colors">${product.variants.map(([color], index) => `<label class="variant-option"><input type="radio" name="color" value="${index}" ${index === 0 ? 'checked' : ''}><span><i style="background:${color[1]}"></i>${localize(color[0])}</span></label>`).join('')}</div></fieldset>
+      <fieldset class="variant-picker"><legend>اللون</legend><div class="variant-options" id="colors">${product.variants.map(([color], index) => `<label class="variant-option"><input type="radio" name="color" value="${index}" ${index === 0 ? 'checked' : ''}><span><i style="background:${color[1]}"></i>${escapeHtml(localize(color[0]))}</span></label>`).join('')}</div></fieldset>
       <fieldset class="variant-picker"><legend>القياس</legend><div class="variant-options" id="sizes"></div></fieldset>
       <button type="submit" class="button">${localize('أضيفي إلى السلة')}</button>
     </form>`;
@@ -149,9 +123,7 @@ function showProduct(product) {
   const updateVariant = () => {
     const index = Number(colors.querySelector('input:checked').value);
     const [variantColor] = product.variants[index];
-    photo.src = product.variants.length > 1
-      ? 'assets/products/' + product.sku + '-' + index + '.jpg'
-      : 'assets/products/' + product.sku + '.jpg';
+    photo.src = product.variants[index][2] || product.image;
     photo.alt = product.name + ' – ' + localize(variantColor[0]);
     const sizes = product.variants[Number(colors.querySelector('input:checked').value)][1] || [genericSize];
     sizesPanel.replaceChildren(...sizes.map((value, index) => {
@@ -163,7 +135,8 @@ function showProduct(product) {
       input.value = String(value);
       input.checked = index === 0;
       const text = document.createElement('span');
-      text.textContent = localize(String(value));
+      text.textContent = sizeLabel(value);
+      text.dir = "auto";
       label.append(input, text);
       return label;
     }));
@@ -174,6 +147,11 @@ function showProduct(product) {
     event.preventDefault();
     const colorIndex = Number(colors.querySelector('input:checked').value);
     const size = sizesPanel.querySelector('input:checked');
+    const inBag = bag.filter(line => line.sku === product.sku).reduce((sum, line) => sum + line.quantity, 0);
+    if (product.quantity !== null && inBag >= product.quantity) {
+      alert("الكمية المطلوبة غير متوفّرة.");
+      return;
+    }
     const item = bag.find(line => line.sku === product.sku && line.color === colorIndex && line.size === size.value);
     if (item) item.quantity = Math.min(99, item.quantity + 1);
     else bag.push({sku: product.sku, color: colorIndex, size: size.value, quantity: 1});
@@ -189,10 +167,10 @@ function showProduct(product) {
 function renderCart(focusIndex, focusAction) {
   const lines = bag.map(item => {
     const product = catalog.find(product => product.sku === item.sku);
-    return { ...item, name: product.name, colorName: localize(product.variants[item.color][0][0]) };
+    return { ...item, price: product.price, name: product.name, colorName: localize(product.variants[item.color][0][0]) };
   });
   $('cart-lines').innerHTML = lines.length ? lines.map((item, index) => `
-    <div class="cart-line"><div><strong>${item.name}</strong><small>${item.colorName} · <bdi>${localize(item.size)}</bdi> · <bdi>${money(temporaryPrice * item.quantity)}</bdi></small></div>
+    <div class="cart-line"><div><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.colorName)} · <bdi>${sizeLabel(item.size)}</bdi> · <bdi>${money(item.price * item.quantity)}</bdi></small></div>
       <div class="quantity"><button data-index="${index}" data-action="minus" aria-label="${item.quantity === 1 ? localize('إزالة القطعة') : localize('خفّضي الكمية')}">−</button><span>${item.quantity}</span><button data-index="${index}" data-action="plus" aria-label="${localize('زيدي الكمية')}" ${item.quantity === 99 ? 'disabled' : ''}>+</button></div>
     </div>`).join('') : `<p>${localize('سلة التسوّق فارغة.')}</p>`;
   if (!lines.length) {
@@ -200,9 +178,9 @@ function renderCart(focusIndex, focusAction) {
     if (focusAction) cart.querySelector('[data-close]').focus();
     return;
   }
-  const total = lines.reduce((sum, item) => sum + temporaryPrice * item.quantity, 0);
+  const total = lines.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const message = [localize('السلام عليكم فريق سنّة ستايل، بدي أطلب هيدا الأوردر:'), '', ...lines.map(item =>
-    `• ${item.name} (${item.sku}) — ${localize('اللون')}: ${item.colorName} — ${localize('قياس')} ${localize(item.size)} — ${localize('الكمية')} ${item.quantity} × ${money(temporaryPrice)} = ${money(temporaryPrice * item.quantity)}`
+    `• ${escapeHtml(item.name)} (${item.sku}) — ${localize('اللون')}: ${escapeHtml(item.colorName)} — ${localize('قياس')} ${sizeLabel(item.size)} — ${localize('الكمية')} ${item.quantity} × ${money(item.price)} = ${money(item.price * item.quantity)}`
   ), '', totalLabel + ': ' + money(total)].join('\n');
   const link = document.createElement('a');
   link.className = 'button';
@@ -248,6 +226,12 @@ $('cart-lines').addEventListener('click', event => {
   if (!button) return;
   const index = Number(button.dataset.index);
   const action = button.dataset.action;
+  const selected = catalog.find(item => item.sku === bag[index].sku);
+  const inBag = bag.filter(item => item.sku === selected.sku).reduce((sum, item) => sum + item.quantity, 0);
+  if (action === "plus" && selected.quantity !== null && inBag >= selected.quantity) {
+    alert("الكمية المطلوبة غير متوفّرة.");
+    return;
+  }
   bag[index].quantity += action === 'plus' ? 1 : -1;
   if (bag[index].quantity === 0) bag.splice(index, 1);
   saveBag();
@@ -284,7 +268,7 @@ window.addEventListener('load', () => {
 const featuredProducts = $('featured-products');
 if (featuredProducts) {
   const featuredSkus = ['SSBM0001', 'SSBM0008', 'SSBM0011', 'SSBM0014'];
-  renderProducts(featuredProducts, featuredSkus.map(sku => catalog.find(product => product.sku === sku)));
+  renderProducts(featuredProducts, featuredSkus.map(sku => catalog.find(product => product.sku === sku)).filter(Boolean));
 }
 
 for (const grid of [products, featuredProducts].filter(Boolean)) {
