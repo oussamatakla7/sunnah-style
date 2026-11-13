@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "convex": "^1.50.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2"
+  }
+}

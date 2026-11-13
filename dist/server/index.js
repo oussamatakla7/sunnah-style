@@ -272,13 +272,77 @@ async function manageOrders(request, bucket, current) {
   return json({orders:orders.filter(Boolean),cursor:result.truncated ? result.cursor : null});
 }
 
+function convexStore(env) {
+  const call = (method, params, body, conditional = {}) => fetch(
+    env.CONVEX_SITE_URL + '/store-record?' + new URLSearchParams(params),
+    {method, body, headers:{Authorization:'Bearer ' + env.STORE_BRIDGE_SECRET, ...conditional}}
+  );
+  return {
+    async get(key) {
+      const response = await call('GET',{key});
+      if (response.status === 404) return null;
+      if (!response.ok) throw Error('Convex read failed');
+      return {etag:response.headers.get('etag'),json:() => response.json()};
+    },
+    async put(key, body, options) {
+      const conditional = {};
+      if (options?.onlyIf?.etagMatches) conditional['If-Match'] = options.onlyIf.etagMatches;
+      if (options?.onlyIf?.etagDoesNotMatch) conditional['If-None-Match'] = '*';
+      const response = await call('PUT',{key},body,conditional);
+      if (response.status === 412) return null;
+      if (!response.ok) throw Error('Convex write failed');
+      return {key};
+    },
+    async delete(key) {
+      if (!(await call('DELETE',{key})).ok) throw Error('Convex delete failed');
+    },
+    async list({cursor}) {
+      const response = await call('GET',{after:cursor || ''});
+      if (!response.ok) throw Error('Convex list failed');
+      const keys = await response.json();
+      return {objects:keys.slice(0,20).map(key => ({key})),truncated:keys.length > 20,cursor:keys[19]};
+    }
+  };
+}
+
+async function migrateStore(env, target) {
+  const bucket = env.BUCKET;
+  const state = await bucket.get(stateKey);
+  if (state) await target.put(stateKey,await state.text());
+  let cursor;
+  let orders = 0;
+  do {
+    const batch = await bucket.list({prefix:'orders/',limit:20,...(cursor ? {cursor} : {})});
+    for (const {key} of batch.objects) {
+      const order = await bucket.get(key);
+      if (order) {
+        await target.put(key,await order.text());
+        orders++;
+      }
+    }
+    cursor = batch.truncated ? batch.cursor : undefined;
+  } while (cursor);
+  return json({state:Boolean(state),orders});
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const path = url.pathname.replace(/\/+$/, '') || '/';
+    const convex = env.CONVEX_SITE_URL && env.STORE_BRIDGE_SECRET ? convexStore(env) : null;
+    const bucket = convex && env.CONVEX_ACTIVE === '1' ? convex : env.BUCKET;
+    if (path === '/api/admin/migrate-store') {
+      if (request.method !== 'POST' || !convex || env.CONVEX_ACTIVE === '1' ||
+          request.headers.get('Authorization') !== 'Bearer ' + env.STORE_BRIDGE_SECRET) return json({error:'not_found'},404);
+      return migrateStore(env,convex);
+    }
+    if (convex && env.CONVEX_ACTIVE === 'migrate' &&
+        ((path === '/api/orders' || path === '/api/admin/state' || path === '/api/admin/orders') && !['GET','HEAD'].includes(request.method))) {
+      return json({error:'maintenance'},503);
+    }
     if (path === '/api/orders') {
       if (request.method !== 'POST') return json({error:'method'},405);
-      return createOrder(request,env.BUCKET);
+      return createOrder(request,bucket);
     }
     if (path === loginPath) {
       if (request.method === 'GET') return await session(request, env) ? redirect('/editor') : loginPage();
@@ -300,10 +364,10 @@ export default {
         return json({error:'login'},401);
       }
       if (path === '/api/admin/users') return manageUsers(request,env,current);
-      if (path === '/api/admin/orders') return manageOrders(request,env.BUCKET,current);
-      if (path === '/api/admin/state' && request.method === 'PUT') return updateState(request, env.BUCKET, current.role);
+      if (path === '/api/admin/orders') return manageOrders(request,bucket,current);
+      if (path === '/api/admin/state' && request.method === 'PUT') return updateState(request, bucket, current.role);
       if (path === '/api/admin/state' && request.method === 'GET') {
-        const {data} = await getState(env.BUCKET);
+        const {data} = await getState(bucket);
         if (current.role === 'products') return json({revision:data.revision, role:current.role, draft:{pages:{}, products:data.draft.products}});
         return json({revision: data.revision, role:current.role, draft: data.draft, publishedPages: Object.keys(data.live.pages)});
       }
@@ -313,7 +377,7 @@ export default {
     const custom = isCustomPage(path);
     const page = custom ? path : path === '/product.html' ? 'product' : pagePaths.get(path);
     if (page || path === '/catalog.js') {
-      const {data} = await getState(env.BUCKET);
+      const {data} = await getState(bucket);
       if (page) {
         const {pages} = data.live;
         const response = pages[page] ? new Response(pages[page], {
