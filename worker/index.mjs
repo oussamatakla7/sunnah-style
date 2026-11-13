@@ -71,24 +71,95 @@ function asset(path, cache = noCache) {
   });
 }
 
+
+const loginPath = '/admin-login';
+const cookieName = '__Host-sunnah-admin';
+const sessionAge = 8 * 60 * 60;
+const encode = new TextEncoder();
+const hex = bytes => Array.from(new Uint8Array(bytes), byte => byte.toString(16).padStart(2,'0')).join('');
+const bytes = value => Uint8Array.from(value.match(/../g), pair => Number.parseInt(pair,16));
+const cookie = (value, age) => cookieName + '=' + value + '; Path=/; Max-Age=' + age + '; Secure; HttpOnly; SameSite=Strict';
+const redirect = (path, session) => new Response(null, {status:303, headers:{
+  ...noCache, Location:path, ...(session ? {'Set-Cookie':session} : {})
+}});
+const sameOrigin = request => request.headers.get('origin') === new URL(request.url).origin;
+const sessionToken = request => request.headers.get('cookie')?.split(';').map(part => part.trim())
+  .find(part => part.startsWith(cookieName+'='))?.slice(cookieName.length+1);
+const sessionKey = async token => 'admin/sessions/' + hex(await crypto.subtle.digest('SHA-256',encode.encode(token)));
+
+async function session(request, env) {
+  const token = sessionToken(request);
+  if (!token || !/^[a-f0-9]{64}$/.test(token)) return null;
+  const key = await sessionKey(token);
+  const entry = await env.BUCKET.head(key);
+  return Number(entry?.customMetadata?.expires) > Date.now() ? key : null;
+}
+
+function loginPage(message = '', status = 200) {
+  return new Response('<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>دخول الإدارة | سنّة ستايل</title><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:1rem;background:#f7f3eb;color:#12362c;font:16px system-ui}main{width:min(100%,26rem);background:white;border:1px solid #ded5c4;padding:2rem}h1{margin:0 0 1rem;font-size:1.65rem}form,label{display:grid;gap:.6rem}form{gap:1rem}input,button{font:inherit;padding:.7rem;border:1px solid #b6c0b8;border-radius:.35rem}button{background:#12362c;color:white;cursor:pointer}p{color:#853a36}</style><main><h1>دخول لوحة سنّة ستايل</h1><p role="alert">'+message+'</p><form method="post" action="/admin-login"><label>اسم المستخدم<input name="username" dir="ltr" autocomplete="username" maxlength="80" required></label><label>كلمة المرور<input name="password" dir="ltr" type="password" autocomplete="current-password" maxlength="128" required></label><button>تسجيل الدخول</button></form></main></html>',{
+    status,headers:{...noCache,'Content-Type':'text/html; charset=utf-8','Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"}
+  });
+}
+
+async function login(request, env) {
+  if (!sameOrigin(request)) return loginPage('أعيدي فتح صفحة تسجيل الدخول.',403);
+  const verifier = env.ADMIN_PASSWORD_VERIFIER;
+  if (!/^[a-f0-9]{32}:[a-f0-9]{64}$/.test(verifier || '')) return loginPage('تسجيل الدخول غير متاح حاليًا.',503);
+  if (Number(request.headers.get('content-length')) > 1024) return loginPage('بيانات الدخول غير صالحة.',400);
+  if (request.headers.get('content-type')?.split(';')[0] !== 'application/x-www-form-urlencoded') return loginPage('بيانات الدخول غير صالحة.',400);
+  const reader = request.body?.getReader();
+  if (!reader) return loginPage('بيانات الدخول غير صالحة.',400);
+  let body = '';
+  const decoder = new TextDecoder();
+  let count = 0;
+  for (;;) {
+    const {done,value} = await reader.read();
+    if (done) break;
+    count += value.byteLength;
+    if (count > 1024) {
+      await reader.cancel();
+      return loginPage('بيانات الدخول غير صالحة.',400);
+    }
+    body += decoder.decode(value,{stream:true});
+  }
+  const fields = new URLSearchParams(body + decoder.decode());
+  const password = fields.get('password') || '';
+  const [salt, expected] = verifier.split(':');
+  const key = await crypto.subtle.importKey('raw',encode.encode(password),'PBKDF2',false,['deriveBits']);
+  const actual = new Uint8Array(await crypto.subtle.deriveBits(
+    {name:'PBKDF2',salt:encode.encode(salt),iterations:100000,hash:'SHA-256'},key,256));
+  let mismatch = 0;
+  const target = bytes(expected);
+  for (let index = 0; index < target.length; index++) mismatch |= target[index] ^ actual[index];
+  if (fields.get('username') !== 'admin' || mismatch !== 0) return loginPage('اسم المستخدم أو كلمة المرور غير صحيحة.',401);
+  const token = hex(crypto.getRandomValues(new Uint8Array(32)));
+  await env.BUCKET.put(await sessionKey(token),'',{customMetadata:{expires:String(Date.now()+sessionAge*1000)}});
+  return redirect('/editor',cookie(token,sessionAge));
+}
+
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const path = url.pathname.replace(/\/+$/, '') || '/';
+    if (path === loginPath) {
+      if (request.method === 'GET') return await session(request, env) ? redirect('/editor') : loginPage();
+      if (request.method === 'POST') return login(request, env);
+      return json({error:'method'},405);
+    }
+    if (path === '/admin-logout') {
+      if (request.method !== 'POST') return json({error:'method'},405);
+      if (!sameOrigin(request)) return json({error:'origin'},403);
+      const key = await session(request, env);
+      if (key) await env.BUCKET.delete(key);
+      return redirect(loginPath,cookie('',0));
+    }
     const isAdmin = adminPaths.has(path);
     if (isAdmin) {
-      const identity = request.headers.get('oai-authenticated-user-id');
-      const email = request.headers.get('oai-authenticated-user-email')?.trim().toLowerCase();
-      const owner = env.ADMIN_EMAIL?.trim().toLowerCase();
-      if (!identity || !email) {
-        if (path === '/editor' || path === '/editor.html') {
-          return new Response(null, {status: 302, headers: {...noCache, Location: '/signin-with-chatgpt?return_to=%2Feditor'}});
-        }
-        return json({error: 'login'}, 401);
+      if (!await session(request, env)) {
+        if (path === '/editor' || path === '/editor.html') return redirect(loginPath);
+        return json({error:'login'},401);
       }
-      if (!owner || email !== owner) return new Response('هذه اللوحة مخصّصة لمالك المتجر.', {
-        status: 403, headers: {...noCache, 'Content-Type': 'text/plain; charset=utf-8'}
-      });
       if (path === '/api/admin/state' && request.method === 'PUT') return updateState(request, env.BUCKET);
       if (path === '/api/admin/state' && request.method === 'GET') {
         const {data} = await getState(env.BUCKET);
