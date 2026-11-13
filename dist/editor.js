@@ -708,6 +708,26 @@ function orderCard(order) {
   }
   card.append(items);
   field('المجموع',orderMoney(order.cents));
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'danger';
+  remove.textContent = 'حذف الطلب';
+  remove.onclick = async () => {
+    if (!confirm('حذف الطلب رقم ' + order.id + ' نهائيًا؟')) return;
+    remove.disabled = true;
+    try {
+      const params = new URLSearchParams({id:order.id,createdAt:order.createdAt});
+      const response = await fetch('/api/admin/orders?' + params, {method:'DELETE'});
+      if (!response.ok) throw Error();
+      card.remove();
+      if (!$('order-list').children.length && !ordersCursor) $('order-list').textContent = 'ما في طلبات بعد.';
+      status('انحذف الطلب.');
+    } catch {
+      status('تعذّر حذف الطلب. جرّبي مجدّدًا.');
+      remove.disabled = false;
+    }
+  };
+  card.append(remove);
   return card;
 }
 async function loadOrders(more = false) {

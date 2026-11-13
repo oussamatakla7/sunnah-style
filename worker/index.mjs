@@ -240,15 +240,31 @@ async function createOrder(request, bucket) {
   const now = Date.now();
   const id = crypto.randomUUID();
   const order = {id,createdAt:new Date(now).toISOString(),delivery,items,cents};
-  const key = 'orders/' + String(9999999999999 - now).padStart(13,'0') + '-' + id;
+  const key = orderKey(id, now);
   await bucket.put(key,JSON.stringify(order));
   return json({id,items,cents},201);
 }
 
-async function listOrders(request, bucket, current) {
+function orderKey(id, timestamp) {
+  return 'orders/' + String(9999999999999 - timestamp).padStart(13,'0') + '-' + id;
+}
+
+async function manageOrders(request, bucket, current) {
   if (current.role !== 'admin') return json({error:'forbidden'},403);
+  const params = new URL(request.url).searchParams;
+  if (request.method === 'DELETE') {
+    if (!sameOrigin(request)) return json({error:'origin'},403);
+    const id = params.get('id') || '';
+    const timestamp = Date.parse(params.get('createdAt'));
+    if (!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(id) ||
+        !Number.isSafeInteger(timestamp) || timestamp < 0 || timestamp > 9999999999999) {
+      return json({error:'invalid'},400);
+    }
+    await bucket.delete(orderKey(id, timestamp));
+    return json({ok:true});
+  }
   if (request.method !== 'GET') return json({error:'method'},405);
-  const cursor = new URL(request.url).searchParams.get('cursor');
+  const cursor = params.get('cursor');
   const result = await bucket.list({prefix:'orders/',limit:20,...(cursor ? {cursor} : {})});
   const orders = await Promise.all(result.objects.map(async entry => (await bucket.get(entry.key))?.json()));
   return json({orders:orders.filter(Boolean),cursor:result.truncated ? result.cursor : null});
@@ -282,7 +298,7 @@ export default {
         return json({error:'login'},401);
       }
       if (path === '/api/admin/users') return manageUsers(request,env,current);
-      if (path === '/api/admin/orders') return listOrders(request,env.BUCKET,current);
+      if (path === '/api/admin/orders') return manageOrders(request,env.BUCKET,current);
       if (path === '/api/admin/state' && request.method === 'PUT') return updateState(request, env.BUCKET, current.role);
       if (path === '/api/admin/state' && request.method === 'GET') {
         const {data} = await getState(env.BUCKET);
