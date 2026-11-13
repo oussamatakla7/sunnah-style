@@ -32,12 +32,32 @@ function upload(file, callback) {
   reader.onerror = () => status('تعذّر قراءة الصورة.');
   reader.readAsDataURL(file);
 }
-for (const button of document.querySelectorAll('[data-tab]')) {
-  button.onclick = () => {
-    $('pages').hidden = button.dataset.tab !== 'pages';
-    $('products').hidden = button.dataset.tab !== 'products';
-  };
+
+let view = 'pages';
+function showView(next) {
+  view = next;
+  for (const id of ['pages','products','page-editor','product-editor']) $(id).hidden = id !== next;
+  for (const button of document.querySelectorAll('.side [data-tab]')) {
+    if (button.dataset.tab === (next.startsWith('product') ? 'products' : 'pages')) button.setAttribute('aria-current','page');
+    else button.removeAttribute('aria-current');
+  }
+  const target = {'page-editor':'page-actions','product-editor':'product-actions',products:'list-actions'}[next];
+  $('actions').hidden = !target;
+  if (target) $(target).append($('actions'));
 }
+for (const button of document.querySelectorAll('[data-tab]')) button.onclick = () => showView(button.dataset.tab);
+for (const button of document.querySelectorAll('[data-edit-page]')) button.onclick = () => {
+  if (!pages) return;
+  $('page').value = button.dataset.editPage;
+  $('page-title').textContent = button.closest('tr').cells[0].textContent;
+  showView('page-editor');
+  openPage();
+};
+for (const button of document.querySelectorAll('[data-width]')) button.onclick = () => {
+  frame.dataset.width = button.dataset.width;
+  for (const choice of document.querySelectorAll('[data-width]')) choice.setAttribute('aria-pressed', String(choice === button));
+};
+
 const nodes = () => [...frame.contentDocument.querySelectorAll(
   'header, main > section, footer, main h1, main h2, main p:not(:empty), main .button, main img, main .campaign, main .location-map'
 )];
@@ -58,6 +78,8 @@ function loadElement() {
   const isCover = node.classList.contains('campaign');
   $('content').disabled = isSection || isCover;
   $('content').value = isSection || isCover ? '' : node.matches('img,iframe') ? node.getAttribute('src') : node.textContent.trim();
+  $('element-link-field').hidden = !node.matches('a');
+  $('element-link').value = node.getAttribute('href') || '';
   $('page-image').disabled = !isCover && !node.matches('img');
   const style = frame.contentWindow.getComputedStyle(node);
   const hex = value => '#' + (value.match(/\d+/g) || []).slice(0,3).map(n => Number(n).toString(16).padStart(2,'0')).join('');
@@ -100,6 +122,13 @@ $('page').onchange = openPage;
 $('apply').onclick = () => {
   const node = selectedNode();
   if (!node) return;
+  if (node.matches('a')) {
+    const href = $('element-link').value.trim();
+    try {
+      if (!href || !['https:', 'http:', 'tel:', 'mailto:'].includes(new URL(href, location.origin).protocol)) throw Error();
+    } catch { status('أدخلي رابطًا صالحًا.'); return; }
+    node.setAttribute('href', href);
+  }
   if (!$('content').disabled) {
     const value = $('content').value;
     if (node.matches('img,iframe')) {
@@ -170,13 +199,38 @@ function loadProduct(sku) {
   (item?.variants || [[['','#242323'],null,'']]).forEach(addVariant);
   $('delete').disabled = !item;
 }
-function listProducts(sku) {
-  $('product').replaceChildren(new Option('منتج جديد',''), ...products.map(p => new Option(p.name + ' · ' + p.sku,p.sku)));
-  $('product').value = sku;
-  loadProduct(sku);
+
+function listProducts() {
+  if (!products) return;
+  const query = $('product-search').value.trim().toLowerCase();
+  const visible = products.filter(item => (item.name + ' ' + item.sku).toLowerCase().includes(query));
+  $('product-count').textContent = visible.length + ' من ' + products.length;
+  $('product-rows').replaceChildren(...visible.map(item => {
+    const row = document.createElement('tr');
+    const photo = document.createElement('img');
+    photo.className = 'table-photo';
+    photo.src = item.image;
+    photo.alt = '';
+    photo.loading = 'lazy';
+    row.insertCell().append(photo);
+    for (const value of [item.name,item.sku,$('category').options[item.category-1]?.text,'$'+item.price,item.quantity ?? '—']) row.insertCell().textContent = value;
+    const edit = document.createElement('button');
+    edit.textContent = 'تعديل';
+    edit.setAttribute('aria-label','تعديل '+item.name);
+    edit.onclick = () => openProduct(item.sku);
+    row.insertCell().append(edit);
+    return row;
+  }));
 }
-$('product').onchange = () => loadProduct($('product').value);
-$('new').onclick = () => listProducts('');
+function openProduct(sku) {
+  if (!products) return;
+  loadProduct(sku);
+  $('product-title').textContent = sku ? 'تعديل المنتج' : 'إضافة منتج';
+  showView('product-editor');
+}
+$('product-search').oninput = listProducts;
+$('new').onclick = () => openProduct('');
+
 $('add-color').onclick = () => addVariant();
 $('image').onchange = event => upload(event.target.files[0], data => {
   image = data;
@@ -200,13 +254,16 @@ $('product-form').onsubmit = event => {
   if (index < 0) products.push(product);
   else products[index] = product;
   status('تعديلات بانتظار الحفظ.');
-  listProducts(sku);
+  listProducts();
+  loadProduct(sku);
+  return true;
 };
 $('delete').onclick = () => {
   if (!currentSku || !confirm('حذف القطعة من المسودة؟')) return;
   products = products.filter(p => p.sku !== currentSku);
+  showView('products');
   status('تعديلات بانتظار الحفظ.');
-  listProducts(products[0]?.sku || '');
+  listProducts();
 };
 
 async function loadState() {
@@ -216,11 +273,11 @@ async function loadState() {
   revision = state.revision;
   pages = state.draft.pages;
   products = state.draft.products ?? window.storeCatalog;
-  listProducts(products[0]?.sku || '');
-  await openPage();
+  listProducts();
   $('save').disabled = $('publish').disabled = false;
 }
 async function commit(action) {
+  if (view === 'product-editor' && (!$('product-form').reportValidity() || !$('product-form').onsubmit(new Event('submit')))) return;
   $('save').disabled = $('publish').disabled = true;
   try {
     const response = await fetch('/api/admin/state', {

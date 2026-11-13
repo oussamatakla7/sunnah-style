@@ -1,5 +1,85 @@
-<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>لوحة سنّة ستايل</title><style>
-[hidden]{display:none!important}*{box-sizing:border-box}body{margin:0;background:#f7f3eb;color:#12362c;font:16px system-ui}header,main{padding:1rem}header{background:#12362c;color:white;display:flex;align-items:center;gap:1rem;flex-wrap:wrap}button,select,input,textarea{font:inherit;padding:.55rem;border:1px solid #b6c0b8;border-radius:.35rem}button{cursor:pointer;background:#12362c;color:white}header button{background:white;color:#12362c}label{display:grid;gap:.3rem}form,aside{display:grid;gap:.65rem}section{margin:0 auto;max-width:1250px}.layout{display:grid;grid-template-columns:270px minmax(0,1fr);gap:1rem}iframe{width:100%;height:75vh;border:1px solid #ccc;background:white}textarea{width:100%;min-height:5rem}.row{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}.variant{padding:.6rem;border:1px solid #ccc;display:grid;gap:.4rem}img{max-width:110px}small{display:block}@media(max-width:680px){.layout{grid-template-columns:1fr}}
-</style><header><strong>لوحة سنّة ستايل</strong><button data-tab="pages">تصميم الصفحات</button><button data-tab="products">المنتجات</button></header><main><div class="row"><button id="save" disabled>حفظ مسودّة</button><button id="publish" disabled>نشر على المتجر</button><form method="post" action="/admin-logout"><button>تسجيل الخروج</button></form></div><p id="status" role="status"></p>
-<section id="pages" class="layout"><aside><label>الصفحة<select id="page"><option value="index">الرئيسية</option><option value="shop">المتجر</option><option value="contact">تواصلي معنا</option></select></label><label>العنصر<select id="element"></select></label><label>النص أو رابط الصورة<textarea id="content"></textarea></label><label>رفع صورة للعنصر<input id="page-image" type="file" accept="image/*"></label><label>لون النص<input id="ink" type="color"></label><label>لون الخلفية<input id="fill" type="color" value="#faf7f0"></label><label>حجم النص بالبكسل<input id="font" type="number" min="10" max="120"></label><label>المسافة الداخلية بالبكسل<input id="padding" type="number" min="0" max="150"></label><button id="apply">حفظ تعديل العنصر</button><div class="row"><button id="up">تحريك القسم لأعلى</button><button id="down">تحريك القسم لأسفل</button></div></aside><iframe id="preview" title="معاينة الصفحة" sandbox="allow-same-origin"></iframe></section>
-<section id="products" hidden><div class="row"><label>المنتجات<select id="product"></select></label><button id="new">إضافة منتج</button></div><form id="product-form"><div class="row"><label>رمز القطعة<input id="sku" required pattern="[A-Za-z0-9_-]+"></label><label>اسم القطعة<input id="name" required></label><label>الفئة<select id="category"><option value="1">فساتين سهرة</option><option value="2">فساتين يومية</option><option value="3">أطقم رياضية</option></select></label></div><label>الوصف<textarea id="description"></textarea></label><div class="row"><label>السعر بالدولار<input id="price" required type="number" min="0" step=".01"></label><label>الكمية<input id="quantity" type="number" min="0" step="1"></label><label><span>سعر مؤقّت</span><input id="temporary" type="checkbox"></label></div><label>صورة المنتج<input id="image" type="file" accept="image/*"></label><img id="thumb" alt=""><div id="variants"></div><div class="row"><button type="button" id="add-color">إضافة لون</button><button type="submit">حفظ المنتج</button><button type="button" id="delete">حذف المنتج</button></div></form></section></main><script defer src="/catalog.js"></script><script defer src="editor.js"></script></html>
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>لوحة إدارة سنّة ستايل</title>
+<style>
+:root{color-scheme:light;--ink:#1e2930;--nav:#1e252b;--blue:#16648b;--line:#d4dce1;--surface:#fff;--canvas:#f0f2f4}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--canvas);color:var(--ink);font:15px/1.6 system-ui,sans-serif}
+h1,h2,p{margin:0}h1{font-size:1.55rem}h2{font-size:1rem}a{color:#125c82}
+button,input,textarea,select{font:inherit}button{cursor:pointer;border:1px solid var(--line);border-radius:4px;background:white;color:var(--ink);padding:.4rem .8rem}
+button:hover{border-color:var(--blue)}button:disabled{opacity:.55;cursor:default}
+.primary{background:var(--blue);border-color:var(--blue);color:#fff}.danger{color:#a52023}
+input:not([type=checkbox]),textarea,select{width:100%;min-width:0;padding:.42rem;border:1px solid #aebac2;border-radius:4px;background:white;color:var(--ink)}
+input[type=color]{height:38px;padding:.2rem}textarea{resize:vertical;min-height:88px}
+:focus-visible{outline:2px solid #087bb4;outline-offset:2px}
+label{display:grid;gap:.3rem;font-weight:600}small{color:#52616a}
+.top{background:#13191e;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:.6rem;padding:.55rem 1rem}
+.top a{color:white}.top button{background:transparent;color:white;border-color:#687680}
+.shell{display:grid;grid-template-columns:190px minmax(0,1fr);min-height:calc(100dvh - 55px)}
+.side{background:var(--nav);color:white;padding:.8rem 0}.side button{display:flex;align-items:center;gap:.7rem;text-align:start;width:100%;border:0;border-radius:0;color:white;background:transparent;padding:.7rem 1rem}
+.side button[aria-current=page]{background:var(--blue)}.side button:hover{background:#34434c}
+main{min-width:0;padding:1.25rem}.row{display:flex;gap:.55rem;align-items:center;flex-wrap:wrap}.spread{justify-content:space-between}
+#status:not(:empty){margin-bottom:.8rem;padding:.55rem .8rem;background:white;border-inline-start:3px solid var(--blue)}
+.panel,.table-wrap{background:var(--surface);border:1px solid var(--line);border-radius:5px}
+.panel{padding:.85rem;display:grid;gap:.7rem;align-content:start}.view-title{margin-bottom:.85rem}.table-wrap{overflow:auto}
+table{border-collapse:collapse;width:100%;text-align:start}th,td{padding:.55rem .7rem;text-align:start;border-bottom:1px solid var(--line);white-space:nowrap}
+tbody tr:nth-child(odd){background:#f8fafb}.table-photo{width:42px;height:42px;object-fit:cover;vertical-align:middle;border-radius:3px}
+.link-button{background:none;border:0;padding:0;color:#125c82;text-decoration:underline;text-underline-offset:.18em}
+#product-search{width:min(100%,19rem)}.product-layout{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:1rem}
+.stack{display:grid;align-content:start;gap:1rem}.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.65rem}.check{display:flex;align-items:center;gap:.4rem}
+#thumb{width:100%;max-height:230px;object-fit:contain}.variant{display:grid;gap:.5rem;border:1px solid var(--line);padding:.6rem;margin-block:.4rem}
+.variant img{width:60px}.variant img:not([src]){display:none}.variant .row>label{flex:1 1 120px}.variant button{justify-self:start}
+.editor-bar{background:#202831;color:white;padding:.65rem;position:relative}.editor-bar button[aria-pressed=true]{background:#d8ebf7;border-color:#5e9fbf}
+.builder{display:grid;grid-template-columns:250px minmax(0,1fr);border:1px solid var(--line);min-height:580px}
+.inspector{background:white;padding:.85rem;display:grid;align-content:start;gap:.65rem;border-inline-end:1px solid var(--line)}
+.canvas{background:#dfe4e8;padding:.65rem;display:flex;justify-content:center;align-items:start;min-width:0}
+#preview{display:block;width:100%;height:72vh;min-height:480px;border:1px solid #b4c0c9;background:white}
+#preview[data-width=tablet]{max-width:768px}#preview[data-width=mobile]{max-width:390px}
+@media(max-width:950px){.shell{grid-template-columns:135px minmax(0,1fr)}.product-layout{grid-template-columns:minmax(0,1fr) 215px}.builder{grid-template-columns:215px minmax(0,1fr)}}
+@media(max-width:700px){.shell,.product-layout,.builder{grid-template-columns:1fr}.side{display:flex;padding:0}.side button{justify-content:center}.inspector{border-inline-end:0}.top{flex-wrap:wrap}main{padding:.7rem}.canvas{padding:.35rem}}
+</style>
+</head>
+<body>
+<header class="top"><strong>لوحة سنّة ستايل</strong><div class="row"><a href="/" target="_blank" rel="noopener">عرض المتجر</a><form method="post" action="/admin-logout"><button>تسجيل الخروج</button></form></div></header>
+<div class="shell">
+<nav class="side" aria-label="إدارة المتجر"><button type="button" data-tab="pages" aria-current="page">▤ الصفحات</button><button type="button" data-tab="products">▦ المنتجات</button></nav>
+<main>
+<p id="status" role="status"></p>
+<section id="pages">
+  <div class="row spread view-title"><h1>الصفحات</h1></div>
+  <div class="table-wrap"><table><thead><tr><th scope="col">الصفحة</th><th scope="col">الرابط</th><th scope="col">الإجراء</th></tr></thead><tbody>
+    <tr><td>الرئيسية</td><td><a href="/" target="_blank" rel="noopener">عرض الصفحة</a></td><td><button data-edit-page="index">تعديل بصري</button></td></tr>
+    <tr><td>المتجر</td><td><a href="/shop" target="_blank" rel="noopener">عرض الصفحة</a></td><td><button data-edit-page="shop">تعديل بصري</button></td></tr>
+    <tr><td>تواصلي معنا</td><td><a href="/contact" target="_blank" rel="noopener">عرض الصفحة</a></td><td><button data-edit-page="contact">تعديل بصري</button></td></tr>
+  </tbody></table></div>
+</section>
+<section id="page-editor" hidden>
+  <div class="row spread editor-bar"><div class="row"><button data-tab="pages">الصفحات</button><strong id="page-title"></strong></div><div class="row" aria-label="مقاس المعاينة"><button data-width="desktop" aria-pressed="true">كمبيوتر</button><button data-width="tablet" aria-pressed="false">تابلت</button><button data-width="mobile" aria-pressed="false">موبايل</button></div><div id="page-actions" class="row"></div></div>
+  <div class="builder"><aside class="inspector"><h2>خصائص العنصر</h2><input id="page" type="hidden"><label>العنصر<select id="element"></select></label><label>النص أو رابط الصورة<textarea id="content"></textarea></label><label id="element-link-field" hidden>وجهة الرابط<input id="element-link" type="text"></label><label>رفع صورة<input id="page-image" type="file" accept="image/*"></label><div class="fields"><label>لون النص<input id="ink" type="color"></label><label>الخلفية<input id="fill" type="color"></label><label>حجم الخط<input id="font" type="number" min="10" max="120"></label><label>المسافة الداخلية<input id="padding" type="number" min="0" max="150"></label></div><button id="apply">تطبيق على المعاينة</button><div class="row"><button id="up">رفع القسم ↑</button><button id="down">خفض القسم ↓</button></div></aside><div class="canvas"><iframe id="preview" title="معاينة الصفحة" sandbox="allow-same-origin"></iframe></div></div>
+</section>
+<section id="products" hidden>
+  <div class="row spread view-title"><h1>المنتجات</h1><button id="new" class="primary">إضافة منتج</button></div>
+  <div class="row spread view-title"><input id="product" type="hidden"><input id="product-search" type="search" aria-label="بحث بالمنتجات" placeholder="ابحثي بالاسم أو الرمز"><small id="product-count"></small><div id="list-actions" class="row"></div></div>
+  <div class="table-wrap"><table><thead><tr><th scope="col">الصورة</th><th scope="col">المنتج</th><th scope="col">الرمز</th><th scope="col">الفئة</th><th scope="col">السعر</th><th scope="col">الكمية</th><th scope="col">الإجراء</th></tr></thead><tbody id="product-rows"></tbody></table></div>
+</section>
+<section id="product-editor" hidden>
+  <div class="row view-title"><button data-tab="products">كل المنتجات</button><h1 id="product-title">تعديل المنتج</h1></div>
+  <form id="product-form" class="product-layout">
+    <div class="stack">
+      <div class="panel"><label>اسم القطعة<input id="name" required></label><label>الوصف<textarea id="description" rows="7"></textarea></label></div>
+      <div class="panel"><h2>بيانات المنتج</h2><div class="fields"><label>رمز القطعة<input id="sku" required pattern="[A-Za-z0-9_\-]+" maxlength="80" dir="ltr"></label><label>السعر بالدولار<input id="price" required type="number" min="0" step=".01"></label><label>الكمية<input id="quantity" type="number" min="0" step="1"></label><label class="check"><input id="temporary" type="checkbox"> سعر مؤقّت</label></div></div>
+      <div class="panel"><div class="row spread"><h2>الألوان والقياسات</h2><button type="button" id="add-color">إضافة لون</button></div><div id="variants"></div></div>
+    </div>
+    <aside class="stack">
+      <div class="panel"><h2>النشر</h2><div id="product-actions" class="row"></div><button type="submit">تطبيق تعديل المنتج</button><button type="button" id="delete" class="danger">حذف المنتج</button></div>
+      <div class="panel"><label>الفئة<select id="category"><option value="1">فساتين سهرة</option><option value="2">فساتين يومية</option><option value="3">أطقم رياضية</option></select></label></div>
+      <div class="panel"><h2>صورة المنتج</h2><img id="thumb" alt="صورة المنتج" hidden><label>رفع صورة<input id="image" type="file" accept="image/*"></label></div>
+    </aside>
+  </form>
+</section>
+<div id="actions" class="row" hidden><button id="save" type="button" disabled>حفظ مسودّة</button><button id="publish" type="button" class="primary" disabled>نشر على المتجر</button></div>
+</main></div>
+<script defer src="/catalog.js"></script><script defer src="/editor.js"></script>
+</body></html>

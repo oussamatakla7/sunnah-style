@@ -2,7 +2,6 @@ const english = document.documentElement.lang === 'en';
 const sizeLabel = value => value === "One Size" ? "قياس موحّد" : String(value);
 const escapeHtml = value => String(value ?? "").replace(/[&<>"\x27]/g, char => "&#" + char.charCodeAt(0) + ";");
 const money = amount => '$' + amount.toLocaleString('en-US');
-const temporaryLabel = english ? 'Temporary price' : 'سعر مؤقّت';
 const totalLabel = english ? 'Estimated total' : 'المجموع التقديري';
 const translations = {
   "الكل": "All",
@@ -97,7 +96,7 @@ function renderProducts(container, items) {
       <div class="product-art"><img src="${escapeHtml(product.image)}" alt="" width="384" height="384" loading="lazy"></div>
       <div class="product-info">
         <small dir="ltr">${product.sku}</small>
-        <h3>${escapeHtml(product.name)}</h3><p class="item-price"><bdi>${money(product.price)}</bdi> ${product.temporary ? '<small>' + temporaryLabel + '</small>' : ''}</p>
+        <h3>${escapeHtml(product.name)}</h3><p class="item-price"><bdi>${money(product.price)}</bdi></p>
         <div class="swatches" aria-label="${product.variants.map(([color]) => localize(color[0])).join(english ? ', ' : '، ')}">
           ${product.variants.map(([color]) => `<i title="${escapeHtml(localize(color[0]))}" style="background:${color[1]}"></i>`).join('')}
         </div>
@@ -109,7 +108,7 @@ function renderProducts(container, items) {
 function showProduct(product) {
   $('detail-body').innerHTML = `
     <p><bdi>${product.sku}</bdi> · ${categories[product.category]}</p>
-    <h2 id="detail-title">${escapeHtml(product.name)}</h2><img class="detail-photo" src="${escapeHtml(product.image)}" alt="" width="384" height="384"><p class="item-price"><bdi>${money(product.price)}</bdi> ${product.temporary ? '<small>' + temporaryLabel + '</small>' : ''}</p>
+    <h2 id="detail-title">${escapeHtml(product.name)}</h2><img class="detail-photo" src="${escapeHtml(product.image)}" alt="" width="384" height="384"><p class="item-price"><bdi>${money(product.price)}</bdi></p>
     <p>${localize('نؤكّد السعر والتوفّر عبر واتساب.')}</p>
     ${product.description ? "<p>" + escapeHtml(product.description) + "</p>" : ""}
     <form id="add-form">
