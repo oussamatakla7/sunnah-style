@@ -89,12 +89,12 @@ function renderCatalog() {
   renderProducts(products, visible);
 }
 
-if (!document.querySelector('link[href="/assets/product-grid.css"]')) {
-    const stylesheet = document.createElement('link');
-    stylesheet.id = 'product-grid-style';
-    stylesheet.rel = 'stylesheet';
-    stylesheet.href = '/assets/product-grid.css';
-    document.head.append(stylesheet);
+const productStyles = '/assets/product-grid.css?v=2';
+if (!document.querySelector('link[href="' + productStyles + '"]')) {
+  const stylesheet = document.createElement('link');
+  stylesheet.rel = 'stylesheet';
+  stylesheet.href = productStyles;
+  document.head.append(stylesheet);
 }
 
 function renderProducts(container, items) {
@@ -102,7 +102,7 @@ function renderProducts(container, items) {
     <article class="product">
       <div class="product-art"><img src="${escapeHtml(product.image)}" alt="" width="384" height="384" loading="lazy"></div>
       <div class="product-info">
-        <small dir="ltr">${product.sku}</small>
+        <small class="product-code"><bdi dir="ltr">${product.sku}</bdi></small>
         <h3>${escapeHtml(product.name)}</h3><p class="item-price"><bdi>${money(product.price)}</bdi></p>
         <div class="swatches" aria-label="${product.variants.map(([color]) => localize(color[0])).join(english ? ', ' : '، ')}">
           ${product.variants.map(([color]) => `<i title="${escapeHtml(localize(color[0]))}" style="background:${color[1]}"></i>`).join('')}
@@ -213,7 +213,7 @@ function showProduct(product) {
       colors.querySelectorAll('input')[index].checked = true;
       updateVariant();
     }) : null);
-  gallery.hidden = gallery.children.length < 2;
+  gallery.hidden = gallery.children.length === 0;
   const updateVariant = () => {
     const index = Number(colors.querySelector('input:checked').value);
     const [variantColor] = product.variants[index];
