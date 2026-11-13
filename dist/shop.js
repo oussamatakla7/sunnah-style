@@ -206,6 +206,7 @@ if (categoriesPanel) {
     const button = event.target.closest('[data-product]');
     if (button) showProduct(catalog.find(product => product.sku === button.dataset.product));
   });
+  search.value = new URLSearchParams(location.search).get('q') ?? '';
   search.addEventListener('input', renderCatalog);
   renderCatalog();
 }
