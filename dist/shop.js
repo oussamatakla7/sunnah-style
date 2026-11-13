@@ -112,20 +112,72 @@ function renderProducts(container, items) {
     </article>`).join('');
 }
 
+function deliveryFields() {
+  return `<fieldset class="delivery-fields"><legend>معلومات التوصيل</legend>
+    <label>الاسم الكامل<input name="customer" autocomplete="name" maxlength="100" required></label>
+    <label>رقم الهاتف<input name="phone" type="tel" dir="ltr" autocomplete="tel" maxlength="25" required></label>
+    <label>المدينة أو المنطقة<input name="area" autocomplete="address-level2" maxlength="100" required></label>
+    <label>العنوان بالتفصيل<input name="address" autocomplete="street-address" maxlength="250" required></label>
+    <label>ملاحظات للتوصيل (اختياري)<textarea name="notes" maxlength="250" rows="2"></textarea></label>
+  </fieldset>`;
+}
+
+function sendWhatsAppOrder(form, orderLines) {
+  const fields = new FormData(form);
+  const value = name => String(fields.get(name) || '').trim().replace(/\s+/g, ' ');
+  const phone = value('phone');
+  if (!value('customer') || !value('area') || !value('address') ||
+      phone.replace(/[^0-9٠-٩۰-۹]/g, '').length < 7) {
+    form.querySelector('[role=status]').textContent = 'تأكّدي من الاسم ورقم الهاتف والمنطقة والعنوان.';
+    return;
+  }
+  form.querySelector('[role=status]').textContent = '';
+  const delivery = ['معلومات التوصيل', 'الاسم: ' + value('customer'), 'الهاتف: ' + phone,
+    'المنطقة: ' + value('area'), 'العنوان: ' + value('address')];
+  if (value('notes')) delivery.push('ملاحظات: ' + value('notes'));
+  const message = ['السلام عليكم فريق سنّة ستايل، حابّة أطلب هيدا الأوردر.',
+    '', 'تفاصيل الطلب', ...orderLines, '', ...delivery].join('\n');
+  window.open(whatsapp + '?text=' + encodeURIComponent(message), '_blank', 'noopener');
+}
+
 function showProduct(product) {
   $('detail-body').innerHTML = `
-    <p><bdi>${product.sku}</bdi> · ${categories[product.category]}</p>
-    <h2 id="detail-title">${escapeHtml(product.name)}</h2><img class="detail-photo" src="${escapeHtml(product.image)}" alt="" width="384" height="384"><p class="item-price"><bdi>${money(product.price)}</bdi></p>
+    <div class="detail-media"><img class="detail-photo" src="${escapeHtml(product.image)}" alt="" width="384" height="384"></div>
+    <div class="detail-copy">
+    <p class="detail-meta">${categories[product.category]} · <bdi>${product.sku}</bdi></p>
+    <h2 id="detail-title">${escapeHtml(product.name)}</h2>
+    <p class="item-price"><bdi>${money(product.price)}</bdi></p>
     <p>${localize('نؤكّد السعر والتوفّر عبر واتساب.')}</p>
     ${product.description ? "<p>" + escapeHtml(product.description) + "</p>" : ""}
     <form id="add-form">
       <fieldset class="variant-picker"><legend>اللون</legend><div class="variant-options" id="colors">${product.variants.map(([color], index) => `<label class="variant-option"><input type="radio" name="color" aria-label="${escapeHtml(localize(color[0]))}" value="${index}" ${index === 0 ? 'checked' : ''}><span><i style="background:${color[1]}"></i></span></label>`).join('')}</div></fieldset>
       <fieldset class="variant-picker"><legend>القياس</legend><div class="variant-options" id="sizes"></div></fieldset>
-      <button type="submit" class="button">${localize('أضيفي إلى السلة')}</button>
-    </form>`;
+      <div class="detail-actions">
+        <button id="detail-order" type="button" class="button">اطلبي عبر واتساب</button>
+        <button type="submit" class="button detail-add">${localize('أضيفي إلى السلة')}</button>
+      </div>
+    </form>
+    <form id="detail-delivery" class="order-form" hidden>
+      ${deliveryFields()}<p role="status"></p><button class="button" type="submit">تابعي إلى واتساب</button>
+    </form></div>`;
   const colors = $('colors');
   const sizesPanel = $('sizes');
   const photo = detail.querySelector('.detail-photo');
+  const order = $('detail-order');
+  const deliveryForm = $('detail-delivery');
+  order.onclick = () => {
+    deliveryForm.hidden = false;
+    deliveryForm.elements.customer.focus();
+  };
+  deliveryForm.onsubmit = event => {
+    event.preventDefault();
+    const colorIndex = Number(colors.querySelector('input:checked').value);
+    const colorName = localize(product.variants[colorIndex][0][0]);
+    const size = sizesPanel.querySelector('input:checked');
+    if (product.quantity === 0 || !size) return;
+    sendWhatsAppOrder(deliveryForm, [product.name + ' (' + product.sku + ')', 'اللون: ' + colorName,
+      'القياس: ' + sizeLabel(size.value), 'الكمية: 1', 'السعر: ' + money(product.price)]);
+  };
   const updateVariant = () => {
     const index = Number(colors.querySelector('input:checked').value);
     const [variantColor] = product.variants[index];
@@ -148,6 +200,9 @@ function showProduct(product) {
     }));
   };
   colors.addEventListener('change', updateVariant);
+  order.disabled = product.quantity === 0;
+  if (order.disabled) order.textContent = 'غير متوفّرة حاليًا';
+  $('add-form').querySelector('button[type=submit]').disabled = product.quantity === 0;
   updateVariant();
   $('add-form').addEventListener('submit', event => {
     event.preventDefault();
@@ -185,15 +240,20 @@ function renderCart(focusIndex, focusAction) {
     return;
   }
   const total = lines.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const message = [localize('السلام عليكم فريق سنّة ستايل، بدي أطلب هيدا الأوردر:'), '', ...lines.map(item =>
-    `• ${escapeHtml(item.name)} (${item.sku}) — ${localize('اللون')}: ${escapeHtml(item.colorName)} — ${localize('قياس')} ${sizeLabel(item.size)} — ${localize('الكمية')} ${item.quantity} × ${money(item.price)} = ${money(item.price * item.quantity)}`
-  ), '', totalLabel + ': ' + money(total)].join('\n');
-  const link = document.createElement('a');
-  link.className = 'button';
-  link.href = whatsapp + '?text=' + encodeURIComponent(message);
-  link.target = '_blank';
-  link.rel = 'noopener';
-  link.textContent = localize('إرسال الطلب عبر واتساب');
+  const orderLines = lines.flatMap(item => [
+    `• ${item.name} (${item.sku})`,
+    `  اللون: ${item.colorName} | القياس: ${sizeLabel(item.size)} | الكمية: ${item.quantity}`,
+    `  ${money(item.price)} × ${item.quantity} = ${money(item.price * item.quantity)}`
+  ]);
+  const form = $('checkout').querySelector('form') || document.createElement('form');
+  if (!form.children.length) {
+    form.className = 'order-form';
+    form.innerHTML = deliveryFields() + '<p role="status"></p><button type="submit" class="button">تابعي إلى واتساب</button>';
+  }
+  form.onsubmit = event => {
+    event.preventDefault();
+    sendWhatsAppOrder(form, [...orderLines, '', totalLabel + ': ' + money(total)]);
+  };
   const note = document.createElement('p');
   note.textContent = localize('نؤكّد السعر والتوفّر عبر واتساب قبل الدفع.');
   const summary = document.createElement('p');
@@ -201,7 +261,7 @@ function renderCart(focusIndex, focusAction) {
   const amount = document.createElement('bdi');
   amount.textContent = money(total);
   summary.append(totalLabel, amount);
-  $('checkout').replaceChildren(summary, note, link);
+  $('checkout').replaceChildren(summary, note, form);
   if (focusAction) {
     const row = $('cart-lines').children[Math.min(focusIndex, lines.length - 1)];
     (row.querySelector(`[data-action="${focusAction}"]:not(:disabled)`) || row.querySelector('button')).focus();
@@ -274,7 +334,10 @@ window.addEventListener('load', () => {
 const featuredProducts = $('featured-products');
 if (featuredProducts) {
   const featuredSkus = ['SSBM0001', 'SSBM0008', 'SSBM0011', 'SSBM0014'];
-  renderProducts(featuredProducts, featuredSkus.map(sku => catalog.find(product => product.sku === sku)).filter(Boolean));
+  const featured = featuredSkus.map(sku => catalog.find(product => product.sku === sku)).filter(Boolean);
+  const heading = $('featured-title');
+  if (heading?.textContent.trim() === 'مختارات سنّة ستايل') heading.textContent = 'اختيارات منى';
+  renderProducts(featuredProducts, [...featured, ...catalog.filter(product => !featured.includes(product))].slice(0, 4));
 }
 
 for (const grid of [products, featuredProducts].filter(Boolean)) {
