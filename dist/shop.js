@@ -49,7 +49,6 @@ const $ = id => document.getElementById(id);
 const products = $('products');
 const categoriesPanel = $('categories');
 const search = $('search');
-const detail = $('detail');
 const cart = $('cart');
 const whatsapp = 'https://wa.me/96176089416';
 const storageKey = 'sunnah-style-bag';
@@ -90,14 +89,15 @@ function renderCatalog() {
   renderProducts(products, visible);
 }
 
-function renderProducts(container, items) {
-  if (!document.getElementById('product-grid-style')) {
+if (!document.querySelector('link[href="/assets/product-grid.css"]')) {
     const stylesheet = document.createElement('link');
     stylesheet.id = 'product-grid-style';
     stylesheet.rel = 'stylesheet';
     stylesheet.href = '/assets/product-grid.css';
     document.head.append(stylesheet);
-  }
+}
+
+function renderProducts(container, items) {
   container.innerHTML = items.map(product => `
     <article class="product">
       <div class="product-art"><img src="${escapeHtml(product.image)}" alt="" width="384" height="384" loading="lazy"></div>
@@ -107,7 +107,7 @@ function renderProducts(container, items) {
         <div class="swatches" aria-label="${product.variants.map(([color]) => localize(color[0])).join(english ? ', ' : '، ')}">
           ${product.variants.map(([color]) => `<i title="${escapeHtml(localize(color[0]))}" style="background:${color[1]}"></i>`).join('')}
         </div>
-        <button data-product="${product.sku}" aria-label="${localize('تفاصيل')} ${escapeHtml(product.name)}">${localize('عرض التفاصيل')}</button>
+        <a class="product-link" href="/product.html?sku=${encodeURIComponent(product.sku)}" aria-label="${localize('تفاصيل')} ${escapeHtml(product.name)}">${localize('عرض التفاصيل')}</a>
       </div>
     </article>`).join('');
 }
@@ -170,11 +170,12 @@ async function sendWhatsAppOrder(form, items) {
 }
 
 function showProduct(product) {
+  document.title = product.name + ' | Sunnah Style by Mona';
   $('detail-body').innerHTML = `
-    <div class="detail-media"><img class="detail-photo" src="${escapeHtml(product.image)}" alt="" width="384" height="384"></div>
+    <div class="detail-media"><img class="detail-photo" src="${escapeHtml(product.image)}" alt="" width="384" height="384"><div id="detail-thumbnails" class="detail-thumbnails" aria-label="صور القطعة"></div></div>
     <div class="detail-copy">
     <p class="detail-meta">${categories[product.category]} · <bdi>${product.sku}</bdi></p>
-    <h2 id="detail-title">${escapeHtml(product.name)}</h2>
+    <h1 id="detail-title">${escapeHtml(product.name)}</h1>
     <p class="item-price"><bdi>${money(product.price)}</bdi></p>
     <p>${localize('نؤكّد السعر والتوفّر عبر واتساب.')}</p>
     ${product.description ? "<p>" + escapeHtml(product.description) + "</p>" : ""}
@@ -182,34 +183,41 @@ function showProduct(product) {
       <fieldset class="variant-picker"><legend>اللون</legend><div class="variant-options" id="colors">${product.variants.map(([color], index) => `<label class="variant-option"><input type="radio" name="color" aria-label="${escapeHtml(localize(color[0]))}" value="${index}" ${index === 0 ? 'checked' : ''}><span><i style="background:${color[1]}"></i></span></label>`).join('')}</div></fieldset>
       <fieldset class="variant-picker"><legend>القياس</legend><div class="variant-options" id="sizes"></div></fieldset>
       <div class="detail-actions">
-        <button id="detail-order" type="button" class="button">اطلبي عبر واتساب</button>
-        <button type="submit" class="button detail-add">${localize('أضيفي إلى السلة')}</button>
+        <button type="submit" class="button">${product.quantity === 0 ? 'غير متوفّرة حاليًا' : localize('أضيفي إلى السلة')}</button>
       </div>
-    </form>
-    <form id="detail-delivery" class="order-form" hidden>
-      ${deliveryFields()}<p role="status"></p><button class="button" type="submit">تابعي إلى واتساب</button>
     </form></div>`;
   const colors = $('colors');
   const sizesPanel = $('sizes');
-  const photo = detail.querySelector('.detail-photo');
-  const order = $('detail-order');
-  const deliveryForm = $('detail-delivery');
-  order.onclick = () => {
-    deliveryForm.hidden = false;
-    deliveryForm.elements.customer.focus();
+  const photo = $('detail-body').querySelector('.detail-photo');
+  const gallery = $('detail-thumbnails');
+  const selectPhoto = (src, label, active) => {
+    photo.src = src;
+    photo.alt = label;
+    for (const thumb of gallery.children) thumb.setAttribute('aria-pressed', String(thumb === active));
   };
-  deliveryForm.onsubmit = event => {
-    event.preventDefault();
-    const colorIndex = Number(colors.querySelector('input:checked').value);
-    const size = sizesPanel.querySelector('input:checked');
-    if (product.quantity === 0 || !size) return;
-    sendWhatsAppOrder(deliveryForm, [{sku:product.sku,color:colorIndex,size:size.value,quantity:1}]);
+  const addThumb = (src, label, select) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.setAttribute('aria-label', label);
+    const image = document.createElement('img');
+    image.src = src;
+    image.alt = '';
+    button.append(image);
+    button.onclick = select ?? (() => selectPhoto(src,label,button));
+    gallery.append(button);
+    return button;
   };
+  const mainThumb = addThumb(product.image, 'الصورة الرئيسية للقطعة');
+  const variantThumbs = product.variants.map(([color,,src],index) => src && src !== product.image
+    ? addThumb(src, localize(color[0]), () => {
+      colors.querySelectorAll('input')[index].checked = true;
+      updateVariant();
+    }) : null);
+  gallery.hidden = gallery.children.length < 2;
   const updateVariant = () => {
     const index = Number(colors.querySelector('input:checked').value);
     const [variantColor] = product.variants[index];
-    photo.src = product.variants[index][2] || product.image;
-    photo.alt = product.name + ' – ' + localize(variantColor[0]);
+    selectPhoto(product.variants[index][2] || product.image, product.name + ' – ' + localize(variantColor[0]), variantThumbs[index] || mainThumb);
     const sizes = product.variants[Number(colors.querySelector('input:checked').value)][1] || [genericSize];
     sizesPanel.replaceChildren(...sizes.map((value, index) => {
       const label = document.createElement('label');
@@ -227,14 +235,13 @@ function showProduct(product) {
     }));
   };
   colors.addEventListener('change', updateVariant);
-  order.disabled = product.quantity === 0;
-  if (order.disabled) order.textContent = 'غير متوفّرة حاليًا';
   $('add-form').querySelector('button[type=submit]').disabled = product.quantity === 0;
   updateVariant();
   $('add-form').addEventListener('submit', event => {
     event.preventDefault();
     const colorIndex = Number(colors.querySelector('input:checked').value);
     const size = sizesPanel.querySelector('input:checked');
+    if (!size || product.quantity === 0) return;
     const inBag = bag.filter(line => line.sku === product.sku).reduce((sum, line) => sum + line.quantity, 0);
     if (product.quantity !== null && inBag >= product.quantity) {
       alert("الكمية المطلوبة غير متوفّرة.");
@@ -244,12 +251,12 @@ function showProduct(product) {
     if (item) item.quantity = Math.min(99, item.quantity + 1);
     else bag.push({sku: product.sku, color: colorIndex, size: size.value, quantity: 1});
     saveBag();
-    detail.close();
+    renderCart();
+    cart.showModal();
     $('toast').textContent = localize('أُضيفت القطعة إلى السلة');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => { $('toast').textContent = ''; }, 2600);
   });
-  detail.showModal();
 }
 
 function renderCart(focusIndex, focusAction) {
@@ -271,6 +278,7 @@ function renderCart(focusIndex, focusAction) {
   const form = $('checkout').querySelector('form') || document.createElement('form');
   if (!form.children.length) {
     form.className = 'order-form';
+    form.hidden = true;
     form.innerHTML = deliveryFields() + '<p role="status"></p><button type="submit" class="button">تابعي إلى واتساب</button>';
   }
   form.onsubmit = event => {
@@ -284,7 +292,17 @@ function renderCart(focusIndex, focusAction) {
   const amount = document.createElement('bdi');
   amount.textContent = money(total);
   summary.append(totalLabel, amount);
-  $('checkout').replaceChildren(summary, note, form);
+  const proceed = document.createElement('button');
+  proceed.type = 'button';
+  proceed.className = 'button';
+  proceed.textContent = 'إتمام الطلب';
+  proceed.hidden = !form.hidden;
+  proceed.onclick = () => {
+    proceed.hidden = true;
+    form.hidden = false;
+    form.elements.customer.focus();
+  };
+  $('checkout').replaceChildren(summary, note, proceed, form);
   if (focusAction) {
     const row = $('cart-lines').children[Math.min(focusIndex, lines.length - 1)];
     (row.querySelector(`[data-action="${focusAction}"]:not(:disabled)`) || row.querySelector('button')).focus();
@@ -326,7 +344,7 @@ $('cart-lines').addEventListener('click', event => {
   saveBag();
   renderCart(index, action);
 });
-for (const dialog of [detail, cart]) dialog.querySelector('[data-close]').addEventListener('click', () => dialog.close());
+cart.querySelector('[data-close]').addEventListener('click', () => cart.close());
 saveBag();
 
 const menu = document.querySelector('.mobile-menu');
@@ -363,11 +381,9 @@ if (featuredProducts) {
   renderProducts(featuredProducts, [...featured, ...catalog.filter(product => !featured.includes(product))].slice(0, 4));
 }
 
-for (const grid of [products, featuredProducts].filter(Boolean)) {
-  grid.addEventListener('click', event => {
-    const button = event.target.closest('[data-product]');
-    if (!button) return;
-    const product = catalog.find(item => item.sku === button.dataset.product);
-    if (product) showProduct(product);
-  });
+if (document.querySelector('.product-page')) {
+  const sku = new URLSearchParams(location.search).get('sku');
+  const product = catalog.find(item => item.sku === sku);
+  if (product) showProduct(product);
+  else $('detail-body').textContent = 'هالقطعة غير متوفّرة. تصفّحي القطع الموجودة بالمتجر.';
 }

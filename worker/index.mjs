@@ -293,7 +293,7 @@ export default {
     if (!['GET', 'HEAD'].includes(request.method)) return json({error: 'method'}, 405);
     if (isAdmin) return asset(path === '/editor' ? '/editor.html' : path);
     const custom = isCustomPage(path);
-    const page = custom ? path : pagePaths.get(path);
+    const page = custom ? path : path === '/product.html' ? 'product' : pagePaths.get(path);
     if (page || path === '/catalog.js') {
       const {data} = await getState(env.BUCKET);
       if (page) {

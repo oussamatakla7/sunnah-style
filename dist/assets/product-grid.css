@@ -20,17 +20,62 @@
   overflow-wrap: anywhere;
 }
 
-.products > .product > .product-info > button {
+.products > .product > .product-info > .product-link {
   margin-block-start: auto;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  background: var(--paper, #fffaf3);
+  color: var(--green);
+}
+
+.products .product-link:hover {
+  background: var(--green);
+  color: white;
+}
+
+.product-page {
+  max-width: 1320px;
+  margin-inline: auto;
+  padding: clamp(1rem, 4vw, 4rem);
+}
+
+.product-back {
+  display: inline-block;
+  margin-block-end: 1.2rem;
+  text-decoration: underline;
+  text-underline-offset: .25em;
+}
+
+.detail-thumbnails:not([hidden]) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin-block-start: .75rem;
+}
+
+.detail-thumbnails button {
+  padding: 2px;
+  width: 64px;
+  border: 1px solid var(--line);
+  background: var(--cream);
+}
+
+.detail-thumbnails button[aria-pressed=true] {
+  border: 2px solid var(--green);
+}
+
+.detail-thumbnails img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
 }
 
 .products .swatches i {
   flex-shrink: 0;
-}
-
-dialog#detail {
-  width: min(92vw, 840px);
-  padding: clamp(1rem, 3vw, 1.75rem);
 }
 
 #detail-body {
@@ -66,18 +111,13 @@ dialog#detail {
   margin-top: 1rem;
 }
 
-.detail-actions .detail-add {
-  background: transparent;
-  color: var(--green);
-  border: 1px solid var(--green);
-}
-
 .detail-actions [aria-disabled=true], .detail-actions :disabled {
   opacity: .6;
   cursor: default;
 }
 
 .order-form[hidden] { display: none; }
+#checkout > button[hidden] { display: none; }
 .order-form { margin-top: 1rem; }
 .delivery-fields { border: 1px solid var(--line); padding: .75rem; min-width: 0; }
 .delivery-fields legend { font-weight: 700; }
@@ -99,8 +139,7 @@ dialog#detail {
 @media (max-width: 620px) {
   #detail-body { grid-template-columns: 1fr; }
   .detail-copy { padding: 0; }
-  #detail-body .detail-photo { max-height: 37vh; }
-  dialog#detail > .close { z-index: 1; background: var(--cream); }
+  #detail-body .detail-photo { max-height: 55vh; }
 }
 
 @supports (grid-template-rows: subgrid) {
@@ -117,7 +156,7 @@ dialog#detail {
     row-gap: 0;
   }
 
-  .products > .product > .product-info > button {
+  .products > .product > .product-info > .product-link {
     margin-block-start: 0;
   }
 }
