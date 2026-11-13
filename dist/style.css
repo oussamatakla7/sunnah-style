@@ -149,3 +149,14 @@ html[dir="ltr"] .campaign { transform: scaleX(-1); }
   .bar .wordmark { font-size: 1rem; }
   .header-actions .icon-action { width: 34px; }
 }
+.mobile-menu, .bar nav .mobile-language { display: none; }
+@media (max-width:850px) {
+  .bar { grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); min-height: 64px; align-items: center; }
+  .bar .wordmark { grid-column: 2; grid-row: 1; justify-self: center; margin-block: 0; }
+  .mobile-menu { display: inline-grid; grid-column: 1; grid-row: 1; justify-self: start; }
+  .header-actions { grid-column: 3; grid-row: 1; justify-self: end; gap: 0; }
+  .header-actions > .language { display: none; }
+  .bar nav { display: none; position: absolute; inset: 100% 0 auto; background: var(--paper); box-shadow: 0 8px 20px #0327221a; padding: .45rem 1rem .7rem; }
+  .bar:has(.mobile-menu[aria-expanded="true"]) nav { display: grid; grid-template-columns: 1fr; }
+  .bar nav a, .bar nav .mobile-language { display: flex; align-items: center; text-align: start; padding-inline: .65rem; }
+}

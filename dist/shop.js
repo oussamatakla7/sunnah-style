@@ -236,3 +236,21 @@ $('cart-lines').addEventListener('click', event => {
 });
 for (const dialog of [detail, cart]) dialog.querySelector('[data-close]').addEventListener('click', () => dialog.close());
 saveBag();
+
+const menu = document.querySelector('.mobile-menu');
+const headerSearch = document.querySelector('.header-search');
+const closeMenu = () => menu.setAttribute('aria-expanded', 'false');
+menu.addEventListener('click', () => {
+  const opening = menu.getAttribute('aria-expanded') === 'false';
+  menu.setAttribute('aria-expanded', String(opening));
+  if (opening) headerSearch.open = false;
+});
+headerSearch.addEventListener('toggle', () => { if (headerSearch.open) closeMenu(); });
+$('open-cart').addEventListener('click', () => { closeMenu(); headerSearch.open = false; });
+document.addEventListener('click', event => { if (!event.target.closest('.bar')) closeMenu(); });
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && menu.getAttribute('aria-expanded') === 'true') {
+    closeMenu();
+    menu.focus();
+  }
+});
