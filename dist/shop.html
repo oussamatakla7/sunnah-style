@@ -199,6 +199,16 @@ html[dir="ltr"] .campaign { transform: scaleX(-1); }
   from { transform: translateY(7px); }
   to { transform: translateY(0); }
 }
+
+.variant-picker { border:0; padding:0; margin:0 0 1rem; min-width:0; }
+.variant-picker legend { font-weight:600; margin-bottom:.45rem; }
+.variant-options { display:flex; flex-wrap:wrap; gap:.45rem; }
+.variant-options .variant-option { position:relative; margin:0; cursor:pointer; }
+.variant-option input { position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer; }
+.variant-option span { display:flex; align-items:center; justify-content:center; gap:.4rem; min-width:44px; min-height:44px; padding:.3rem .65rem; background:#fff; border:1px solid var(--line); }
+.variant-option i { width:14px; height:14px; border-radius:50%; box-shadow:0 0 0 1px #0003; }
+.variant-option input:checked + span { border-color:var(--green); box-shadow:inset 0 0 0 1px var(--green); background:#eaf0eb; }
+.variant-option input:focus-visible + span { outline:2px solid var(--green); outline-offset:2px; }
 </style><script defer src="shop.js"></script></head>
 <body>
 <div class="announcement">الطلبات وتأكيد الأسعار عبر واتساب</div>

@@ -200,3 +200,12 @@ html[dir="ltr"] .campaign { transform: scaleX(-1); }
 .featured-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .5rem 1rem; margin-bottom: 1.15rem; }
 .featured-heading h2 { margin: 0; }
 @media (min-width: 651px) { .featured-section .products { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.variant-picker { border:0; padding:0; margin:0 0 1rem; min-width:0; }
+.variant-picker legend { font-weight:600; margin-bottom:.45rem; }
+.variant-options { display:flex; flex-wrap:wrap; gap:.45rem; }
+.variant-options .variant-option { position:relative; margin:0; cursor:pointer; }
+.variant-option input { position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer; }
+.variant-option span { display:flex; align-items:center; justify-content:center; gap:.4rem; min-width:44px; min-height:44px; padding:.3rem .65rem; background:#fff; border:1px solid var(--line); }
+.variant-option i { width:14px; height:14px; border-radius:50%; box-shadow:0 0 0 1px #0003; }
+.variant-option input:checked + span { border-color:var(--green); box-shadow:inset 0 0 0 1px var(--green); background:#eaf0eb; }
+.variant-option input:focus-visible + span { outline:2px solid var(--green); outline-offset:2px; }

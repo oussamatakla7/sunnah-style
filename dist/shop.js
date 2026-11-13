@@ -1,6 +1,5 @@
 const english = document.documentElement.lang === 'en';
 const temporaryPrice = 100;
-const photoLabel = english ? 'Temporary illustration' : 'صورة توضيحية مؤقّتة';
 const money = amount => '$' + amount.toLocaleString('en-US');
 const temporaryLabel = english ? 'Temporary price' : 'سعر مؤقّت';
 const totalLabel = english ? 'Estimated total' : 'المجموع التقديري';
@@ -122,7 +121,7 @@ function renderCatalog() {
 function renderProducts(container, items) {
   container.innerHTML = items.map(product => `
     <article class="product">
-      <div class="product-art"><img src="assets/products/${product.sku}.jpg" alt="" width="384" height="384" loading="lazy"></div><p class="illustrative-photo">${photoLabel}</p>
+      <div class="product-art"><img src="assets/products/${product.sku}.jpg" alt="" width="384" height="384" loading="lazy"></div>
       <div class="product-info">
         <small dir="ltr">${product.sku}</small>
         <h3>${product.name}</h3><p class="item-price"><bdi>${money(temporaryPrice)}</bdi> <small>${temporaryLabel}</small></p>
@@ -137,24 +136,44 @@ function renderProducts(container, items) {
 function showProduct(product) {
   $('detail-body').innerHTML = `
     <p><bdi>${product.sku}</bdi> · ${categories[product.category]}</p>
-    <h2 id="detail-title">${product.name}</h2><img class="detail-photo" src="assets/products/${product.sku}.jpg" alt="" width="384" height="384"><p class="illustrative-photo">${photoLabel}</p><p class="item-price"><bdi>${money(temporaryPrice)}</bdi> <small>${temporaryLabel}</small></p>
+    <h2 id="detail-title">${product.name}</h2><img class="detail-photo" src="assets/products/${product.sku}.jpg" alt="" width="384" height="384"><p class="item-price"><bdi>${money(temporaryPrice)}</bdi> <small>${temporaryLabel}</small></p>
     <p>${localize('نؤكّد السعر والتوفّر عبر واتساب.')}</p>
     <form id="add-form">
-      <label>${localize('اللون')}<select id="color">${product.variants.map(([color], i) => `<option value="${i}">${localize(color[0])}</option>`).join('')}</select></label>
-      <label>${localize('القياس')}<select id="size"></select></label>
+      <fieldset class="variant-picker"><legend>اللون</legend><div class="variant-options" id="colors">${product.variants.map(([color], index) => `<label class="variant-option"><input type="radio" name="color" value="${index}" ${index === 0 ? 'checked' : ''}><span><i style="background:${color[1]}"></i>${localize(color[0])}</span></label>`).join('')}</div></fieldset>
+      <fieldset class="variant-picker"><legend>القياس</legend><div class="variant-options" id="sizes"></div></fieldset>
       <button type="submit" class="button">${localize('أضيفي إلى السلة')}</button>
     </form>`;
-  const color = $('color');
-  const size = $('size');
-  const updateSizes = () => {
-    const sizes = product.variants[Number(color.value)][1] || [genericSize];
-    size.replaceChildren(...sizes.map(value => new Option(localize(String(value)), String(value))));
+  const colors = $('colors');
+  const sizesPanel = $('sizes');
+  const photo = detail.querySelector('.detail-photo');
+  const updateVariant = () => {
+    const index = Number(colors.querySelector('input:checked').value);
+    const [variantColor] = product.variants[index];
+    photo.src = product.variants.length > 1
+      ? 'assets/products/' + product.sku + '-' + index + '.jpg'
+      : 'assets/products/' + product.sku + '.jpg';
+    photo.alt = product.name + ' – ' + localize(variantColor[0]);
+    const sizes = product.variants[Number(colors.querySelector('input:checked').value)][1] || [genericSize];
+    sizesPanel.replaceChildren(...sizes.map((value, index) => {
+      const label = document.createElement('label');
+      label.className = 'variant-option';
+      const input = document.createElement('input');
+      input.type = 'radio';
+      input.name = 'size';
+      input.value = String(value);
+      input.checked = index === 0;
+      const text = document.createElement('span');
+      text.textContent = localize(String(value));
+      label.append(input, text);
+      return label;
+    }));
   };
-  color.addEventListener('change', updateSizes);
-  updateSizes();
+  colors.addEventListener('change', updateVariant);
+  updateVariant();
   $('add-form').addEventListener('submit', event => {
     event.preventDefault();
-    const colorIndex = Number(color.value);
+    const colorIndex = Number(colors.querySelector('input:checked').value);
+    const size = sizesPanel.querySelector('input:checked');
     const item = bag.find(line => line.sku === product.sku && line.color === colorIndex && line.size === size.value);
     if (item) item.quantity = Math.min(99, item.quantity + 1);
     else bag.push({sku: product.sku, color: colorIndex, size: size.value, quantity: 1});
