@@ -161,12 +161,37 @@ html[dir="ltr"] .campaign { transform: scaleX(-1); }
   .bar nav { display: none; position: absolute; inset: 100% 0 auto; background: var(--paper); box-shadow: 0 8px 20px #0327221a; padding: .45rem 1rem .7rem; }
   .bar:has(.mobile-menu[aria-expanded="true"]) nav { display: grid; grid-template-columns: 1fr; }
   .bar nav a, .bar nav .mobile-language { display: flex; align-items: center; text-align: start; padding-inline: .65rem; }
-}</style><script defer src="shop.js"></script></head>
+}
+.site-footer { display:block; padding: 0 max(1rem,5vw); }
+.footer-inner { max-width: 1220px; margin:auto; display:grid; grid-template-columns: 1.3fr .75fr 1fr; gap:clamp(1.25rem,5vw,4rem); padding:clamp(2rem,5vw,3.75rem) 0; }
+.site-footer .footer-brand { width:fit-content; gap:.65rem; }
+.site-footer .footer-brand img { width:56px; height:56px; }
+.site-footer .wordmark { color:var(--gold); }
+.footer-links { display:grid; justify-items:start; align-content:start; gap:.55rem; }
+.footer-links h2 { margin:0 .0rem .25rem; color:var(--gold); font-size:1.05rem; }
+.footer-links p { margin:0; line-height:1.7; }
+.footer-links a { font-size:.94rem; }
+.footer-whatsapp { text-decoration:underline; text-underline-offset:.3em; }
+.social-icons { direction:inherit; gap:.5rem; margin-top:.8rem; }
+.social-icons a { display:grid; place-items:center; width:44px; height:44px; border:1px solid currentColor; border-radius:50%; }
+.social-icons a:hover { background:var(--gold); color:var(--green); }
+@media(max-width:650px) {
+  .footer-inner { grid-template-columns: minmax(0, .85fr) minmax(0,1.15fr); gap:1.35rem 1rem; }
+  .footer-identity { grid-column:1/-1; border-bottom:1px solid #dfc48f55; padding-bottom:1.15rem; }
+  .footer-links a, .footer-links p { font-size:.84rem; }
+}
+</style><script defer src="shop.js"></script></head>
 <body>
 <div class="announcement">الطلبات وتأكيد الأسعار عبر واتساب</div>
 <header class="bar"><button type="button" class="icon-action mobile-menu" aria-controls="page-nav" aria-expanded="false" aria-label="القائمة الرئيسية"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button><a class="wordmark" href="index.html" dir="ltr">SUNNAH STYLE <small>BY MONA</small></a><nav id="page-nav" aria-label="القائمة الرئيسية"><a href="index.html" aria-current="page">الرئيسية</a><a href="shop.html">المتجر</a><a href="contact.html">تواصلي معنا</a></nav><div class="header-actions"><details class="header-search"><summary class="icon-action" aria-label="بحث"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 4.5 4.5"/></svg></summary><form class="header-search-form" action="shop.html" method="get" role="search" aria-label="بحث"><input type="search" name="q" required aria-label="ابحثي عن موديل أو رمز" placeholder="ابحثي عن موديل أو رمز"><button class="button" type="submit">بحث</button></form></details><button id="open-cart" class="cart-button icon-action" aria-label="حقيبة التسوّق"><svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h20v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9Zm0 0 4-5h12l4 5M9 13a5 5 0 0 0 10 0"/></svg><span id="count">0</span></button></div></header>
 <main><section class="hero" aria-labelledby="hero-title"><div class="hero-copy"><h1 id="hero-title">أناقة محتشمة</h1><p class="intro">أطقم جلباب وفساتين لليوميات والمناسبات.</p><a class="button gold" href="shop.html">تسوّقي المجموعة</a></div><div class="campaign" role="img" aria-label="صورة غلاف توضيحية للأزياء المحتشمة"></div></section><section class="home-sections" id="collection"><h2>تسوّقي حسب القسم</h2><div class="category-links"><a href="shop.html?category=1"><img src="assets/category-1.jpg" alt="" loading="lazy"><div class="category-label">فساتين سهرة <span aria-hidden="true">←</span></div></a><a href="shop.html?category=2"><img src="assets/category-2.jpg" alt="" loading="lazy"><div class="category-label">فساتين يومية <span aria-hidden="true">←</span></div></a><a href="shop.html?category=3"><img src="assets/category-3.jpg" alt="" loading="lazy"><div class="category-label">أطقم رياضية <span aria-hidden="true">←</span></div></a></div><p class="category-note">صور الأقسام توضيحية مؤقتًا.</p></section></main>
-<footer><a class="footer-brand" href="index.html"><img src="assets/logo.jpg" alt=""><span class="wordmark" dir="ltr">SUNNAH STYLE <small>BY MONA</small></span></a><div class="contact"><h2><a href="contact.html">تواصلي معنا</a></h2><p>أبو سمرا، طرابلس، لبنان، مقابل مدرسة البيان</p><a href="https://wa.me/96176089416">واتساب <bdi>+961 76 089 416</bdi></a><div class="social"><a href="https://www.instagram.com/sunnah_style_22/">Instagram</a><a href="https://www.facebook.com/share/1dY7f167Za/">Facebook</a><a href="https://www.tiktok.com/@sunnah_style_2">TikTok</a></div></div></footer>
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-identity"><a class="footer-brand" href="index.html"><img src="assets/logo.jpg" alt="" width="56" height="56" loading="lazy"><span class="wordmark" dir="ltr">SUNNAH STYLE <small>BY MONA</small></span></a><div class="social social-icons"><a href="https://www.instagram.com/sunnah_style_22/" aria-label="إنستغرام" title="إنستغرام"><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.7" r="1" fill="currentColor" stroke="none"/></svg></a><a href="https://www.facebook.com/share/1dY7f167Za/" aria-label="فيسبوك" title="فيسبوك"><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" ><path fill="currentColor" d="M14 21v-8h2.7l.4-3H14V8c0-.9.3-1.5 1.6-1.5h1.7V3.8c-.3 0-1.4-.2-2.5-.2C12.2 3.6 10.5 5.2 10.5 8v2H8v3h2.5v8z"/></svg></a><a href="https://www.tiktok.com/@sunnah_style_2" aria-label="تيك توك" title="تيك توك"><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" ><path fill="currentColor" d="M14 3h3a4 4 0 0 0 4 4v3a7 7 0 0 1-4-1.2V16a5 5 0 1 1-5-5h.8v3H12a2 2 0 1 0 2 2z"/></svg></a></div></div>
+    <nav class="footer-links" aria-label="روابط الفوتر"><h2>روابط سريعة</h2><a href="index.html">الرئيسية</a><a href="shop.html">المتجر</a><a href="contact.html">تواصلي معنا</a></nav>
+    <div class="footer-links"><h2>زورينا بالمحل</h2><p>أبو سمرا، طرابلس، لبنان<br>مقابل مدرسة البيان</p><a class="footer-whatsapp" href="https://wa.me/96176089416">واتساب <bdi>+961 76 089 416</bdi></a></div>
+  </div>
+</footer>
 <dialog id="detail" aria-labelledby="detail-title"><button class="close" data-close aria-label="إغلاق">×</button><div id="detail-body"></div></dialog>
 <dialog id="cart" aria-labelledby="cart-title"><button class="close" data-close aria-label="إغلاق">×</button><h2 id="cart-title">حقيبة التسوّق</h2><div id="cart-lines"></div><div id="checkout"></div></dialog>
 <div id="toast" role="status" aria-live="polite"></div>

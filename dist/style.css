@@ -160,3 +160,21 @@ html[dir="ltr"] .campaign { transform: scaleX(-1); }
   .bar:has(.mobile-menu[aria-expanded="true"]) nav { display: grid; grid-template-columns: 1fr; }
   .bar nav a, .bar nav .mobile-language { display: flex; align-items: center; text-align: start; padding-inline: .65rem; }
 }
+.site-footer { display:block; padding: 0 max(1rem,5vw); }
+.footer-inner { max-width: 1220px; margin:auto; display:grid; grid-template-columns: 1.3fr .75fr 1fr; gap:clamp(1.25rem,5vw,4rem); padding:clamp(2rem,5vw,3.75rem) 0; }
+.site-footer .footer-brand { width:fit-content; gap:.65rem; }
+.site-footer .footer-brand img { width:56px; height:56px; }
+.site-footer .wordmark { color:var(--gold); }
+.footer-links { display:grid; justify-items:start; align-content:start; gap:.55rem; }
+.footer-links h2 { margin:0 .0rem .25rem; color:var(--gold); font-size:1.05rem; }
+.footer-links p { margin:0; line-height:1.7; }
+.footer-links a { font-size:.94rem; }
+.footer-whatsapp { text-decoration:underline; text-underline-offset:.3em; }
+.social-icons { direction:inherit; gap:.5rem; margin-top:.8rem; }
+.social-icons a { display:grid; place-items:center; width:44px; height:44px; border:1px solid currentColor; border-radius:50%; }
+.social-icons a:hover { background:var(--gold); color:var(--green); }
+@media(max-width:650px) {
+  .footer-inner { grid-template-columns: minmax(0, .85fr) minmax(0,1.15fr); gap:1.35rem 1rem; }
+  .footer-identity { grid-column:1/-1; border-bottom:1px solid #dfc48f55; padding-bottom:1.15rem; }
+  .footer-links a, .footer-links p { font-size:.84rem; }
+}
