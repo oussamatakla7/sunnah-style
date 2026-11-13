@@ -254,3 +254,10 @@ document.addEventListener('keydown', event => {
     menu.focus();
   }
 });
+
+window.addEventListener('load', () => {
+  const fonts = document.createElement('link');
+  fonts.rel = 'stylesheet';
+  fonts.href = 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Instrument+Serif&family=Noto+Naskh+Arabic:wght@500;600&display=swap';
+  document.head.append(fonts);
+}, { once: true });
