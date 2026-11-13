@@ -1,4 +1,46 @@
-const categories = ['الكل', 'فساتين سهرة', 'فساتين يومية', 'أطقم رياضية'];
+const english = document.documentElement.lang === 'en';
+const translations = {
+  "الكل": "All",
+  "فساتين سهرة": "Evening dresses",
+  "فساتين يومية": "Everyday dresses",
+  "أطقم رياضية": "Sportswear sets",
+  "أسود": "Black",
+  "كحلي": "Navy",
+  "زيتي": "Olive",
+  "زيتي فاتح": "Light olive",
+  "بوردو": "Burgundy",
+  "بيج": "Beige",
+  "بني": "Brown",
+  "زهري": "Pink",
+  "موف": "Mauve",
+  "برتقالي": "Orange",
+  "كافا": "Taupe",
+  "توتي": "Berry",
+  "تركواز": "Turquoise",
+  "One Size": "One size",
+  "ما لقينا موديلات مطابقة.": "No matching styles.",
+  "الصورة قريباً": "Photo coming soon",
+  "تفاصيل": "Details for",
+  "شوفي التفاصيل": "View details",
+  "السعر والتوفّر بيتأكدوا عبر واتساب.": "Price and availability are confirmed on WhatsApp.",
+  "اللون": "Color",
+  "القياس": "Size",
+  "أضيفي للحقيبة": "Add to bag",
+  "انضاف الموديل للحقيبة": "Added to your bag",
+  "إزالة القطعة": "Remove item",
+  "خفّضي الكمية": "Decrease quantity",
+  "زيدي الكمية": "Increase quantity",
+  "الحقيبة بعدها فاضية.": "Your bag is empty.",
+  "مرحبا Sunnah Style، بدي استفسر عن السعر والتوفّر لهيدي القطع:": "Hi Sunnah Style, could you confirm prices and availability for these items?",
+  "قياس": "Size",
+  "الكمية": "Quantity",
+  "ابعتي الطلب ع واتساب": "Send order on WhatsApp",
+  "المحل بيأكّد السعر والتوفّر وبيتابع الطلب معك ع واتساب.": "The boutique will confirm pricing and availability and follow up with you on WhatsApp.",
+  "يُحدّد عبر واتساب": "Confirm on WhatsApp"
+};
+const localize = text => english ? translations[text] ?? text : text;
+const englishNames = ["Plain zip dress","Designed zip dress","Orange evening dress","Evening dress with bodice detail","Evening dress without chiffon","Chiffon evening dress","Plain dress with bodice detail","Flared chiffon dress","Loose everyday dress","Bow dress","Button-front dress","Button dress with detailing","Gathered dress with sleeves","Sport skirt and jacket set"];
+const categories = ['الكل', 'فساتين سهرة', 'فساتين يومية', 'أطقم رياضية'].map(localize);
 const black = ['أسود', '#242323'];
 const navy = ['كحلي', '#26364b'];
 const olive = ['زيتي', '#646a47'];
@@ -25,7 +67,7 @@ const catalog = [
   [13, 2, 'فستان مكشكش مع أكمام', [black, burgundy, beige, olive, ['تركواز', '#408782']].map(color => [color, [38, 40, 42, 44]])],
   [14, 3, 'طقم رياضي بتنورة وجاكيت', [brown, olive, black].map(color => [color, oneSize])],
 ].map(([number, category, name, variants]) => ({
-  sku: 'SSBM' + String(number).padStart(4, '0'), category, name, variants,
+  sku: 'SSBM' + String(number).padStart(4, '0'), category, name: english ? englishNames[number - 1] : name, variants,
 }));
 
 const $ = id => document.getElementById(id);
@@ -37,7 +79,8 @@ const cart = $('cart');
 const whatsapp = 'https://wa.me/96176089416';
 const storageKey = 'sunnah-style-bag';
 const genericSize = 'يُحدّد عبر واتساب';
-let activeCategory = 0;
+const requestedCategory = Number(new URLSearchParams(location.search).get('category'));
+let activeCategory = Number.isInteger(requestedCategory) && requestedCategory >= 1 && requestedCategory < categories.length ? requestedCategory : 0;
 let toastTimer;
 let bag = readBag();
 
@@ -65,20 +108,20 @@ function renderCatalog() {
   const query = search.value.trim().toLowerCase();
   const visible = catalog.filter(product =>
     (!activeCategory || product.category === activeCategory)
-    && [product.name, product.sku, categories[product.category], ...product.variants.map(([color]) => color[0])]
+    && [product.name, product.sku, categories[product.category], ...product.variants.flatMap(([color]) => [color[0], localize(color[0])])]
       .some(value => value.toLowerCase().includes(query))
   );
-  $('results').textContent = visible.length ? visible.length + ' موديل' : 'ما لقينا موديلات مطابقة.';
+  $('results').textContent = visible.length ? `${visible.length} ${english ? (visible.length === 1 ? "style" : "styles") : "موديل"}` : localize('ما لقينا موديلات مطابقة.');
   products.innerHTML = visible.map(product => `
     <article class="product">
-      <div class="product-art" data-cat="${product.category - 1}"><span>الصورة قريباً</span></div>
+      <div class="product-art" data-cat="${product.category - 1}"><span>${localize('الصورة قريباً')}</span></div>
       <div class="product-info">
         <small dir="ltr">${product.sku}</small>
         <h3>${product.name}</h3>
-        <div class="swatches" aria-label="${product.variants.map(([color]) => color[0]).join('، ')}">
-          ${product.variants.map(([color]) => `<i title="${color[0]}" style="background:${color[1]}"></i>`).join('')}
+        <div class="swatches" aria-label="${product.variants.map(([color]) => localize(color[0])).join(english ? ', ' : '، ')}">
+          ${product.variants.map(([color]) => `<i title="${localize(color[0])}" style="background:${color[1]}"></i>`).join('')}
         </div>
-        <button data-product="${product.sku}" aria-label="تفاصيل ${product.name}">شوفي التفاصيل</button>
+        <button data-product="${product.sku}" aria-label="${localize('تفاصيل')} ${product.name}">${localize('شوفي التفاصيل')}</button>
       </div>
     </article>`).join('');
 }
@@ -87,17 +130,17 @@ function showProduct(product) {
   $('detail-body').innerHTML = `
     <p><bdi>${product.sku}</bdi> · ${categories[product.category]}</p>
     <h2 id="detail-title">${product.name}</h2>
-    <p>السعر والتوفّر بيتأكدوا عبر واتساب.</p>
+    <p>${localize('السعر والتوفّر بيتأكدوا عبر واتساب.')}</p>
     <form id="add-form">
-      <label>اللون<select id="color">${product.variants.map(([color], i) => `<option value="${i}">${color[0]}</option>`).join('')}</select></label>
-      <label>القياس<select id="size"></select></label>
-      <button type="submit" class="button">أضيفي للحقيبة</button>
+      <label>${localize('اللون')}<select id="color">${product.variants.map(([color], i) => `<option value="${i}">${localize(color[0])}</option>`).join('')}</select></label>
+      <label>${localize('القياس')}<select id="size"></select></label>
+      <button type="submit" class="button">${localize('أضيفي للحقيبة')}</button>
     </form>`;
   const color = $('color');
   const size = $('size');
   const updateSizes = () => {
     const sizes = product.variants[Number(color.value)][1] || [genericSize];
-    size.replaceChildren(...sizes.map(value => new Option(String(value))));
+    size.replaceChildren(...sizes.map(value => new Option(localize(String(value)), String(value))));
   };
   color.addEventListener('change', updateSizes);
   updateSizes();
@@ -109,7 +152,7 @@ function showProduct(product) {
     else bag.push({sku: product.sku, color: colorIndex, size: size.value, quantity: 1});
     saveBag();
     detail.close();
-    $('toast').textContent = 'انضاف الموديل للحقيبة';
+    $('toast').textContent = localize('انضاف الموديل للحقيبة');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => { $('toast').textContent = ''; }, 2600);
   });
@@ -119,28 +162,28 @@ function showProduct(product) {
 function renderCart(focusIndex, focusAction) {
   const lines = bag.map(item => {
     const product = catalog.find(product => product.sku === item.sku);
-    return { ...item, name: product.name, colorName: product.variants[item.color][0][0] };
+    return { ...item, name: product.name, colorName: localize(product.variants[item.color][0][0]) };
   });
   $('cart-lines').innerHTML = lines.length ? lines.map((item, index) => `
-    <div class="cart-line"><div><strong>${item.name}</strong><small>${item.colorName} · <bdi>${item.size}</bdi></small></div>
-      <div class="quantity"><button data-index="${index}" data-action="minus" aria-label="${item.quantity === 1 ? 'إزالة القطعة' : 'خفّضي الكمية'}">−</button><span>${item.quantity}</span><button data-index="${index}" data-action="plus" aria-label="زيدي الكمية" ${item.quantity === 99 ? 'disabled' : ''}>+</button></div>
-    </div>`).join('') : '<p>الحقيبة بعدها فاضية.</p>';
+    <div class="cart-line"><div><strong>${item.name}</strong><small>${item.colorName} · <bdi>${localize(item.size)}</bdi></small></div>
+      <div class="quantity"><button data-index="${index}" data-action="minus" aria-label="${item.quantity === 1 ? localize('إزالة القطعة') : localize('خفّضي الكمية')}">−</button><span>${item.quantity}</span><button data-index="${index}" data-action="plus" aria-label="${localize('زيدي الكمية')}" ${item.quantity === 99 ? 'disabled' : ''}>+</button></div>
+    </div>`).join('') : `<p>${localize('الحقيبة بعدها فاضية.')}</p>`;
   if (!lines.length) {
     $('checkout').replaceChildren();
     if (focusAction) cart.querySelector('[data-close]').focus();
     return;
   }
-  const message = ['مرحبا Sunnah Style، بدي استفسر عن السعر والتوفّر لهيدي القطع:', '', ...lines.map(item =>
-    `• ${item.name} (${item.sku}) — ${item.colorName} — قياس ${item.size} — الكمية ${item.quantity}`
+  const message = [localize('مرحبا Sunnah Style، بدي استفسر عن السعر والتوفّر لهيدي القطع:'), '', ...lines.map(item =>
+    `• ${item.name} (${item.sku}) — ${item.colorName} — ${localize('قياس')} ${localize(item.size)} — ${localize('الكمية')} ${item.quantity}`
   )].join('\n');
   const link = document.createElement('a');
   link.className = 'button';
   link.href = whatsapp + '?text=' + encodeURIComponent(message);
   link.target = '_blank';
   link.rel = 'noopener';
-  link.textContent = 'ابعتي الطلب ع واتساب';
+  link.textContent = localize('ابعتي الطلب ع واتساب');
   const note = document.createElement('p');
-  note.textContent = 'المحل بيأكّد السعر والتوفّر وبيتابع الطلب معك ع واتساب.';
+  note.textContent = localize('المحل بيأكّد السعر والتوفّر وبيتابع الطلب معك ع واتساب.');
   $('checkout').replaceChildren(note, link);
   if (focusAction) {
     const row = $('cart-lines').children[Math.min(focusIndex, lines.length - 1)];
@@ -148,21 +191,24 @@ function renderCart(focusIndex, focusAction) {
   }
 }
 
-categoriesPanel.innerHTML = categories.map((category, index) =>
-  `<button data-category="${index}" aria-pressed="${index === 0}">${category}</button>`
-).join('');
-categoriesPanel.addEventListener('click', event => {
-  const button = event.target.closest('[data-category]');
-  if (!button) return;
-  activeCategory = Number(button.dataset.category);
-  for (const option of categoriesPanel.children) option.setAttribute('aria-pressed', String(option === button));
+if (categoriesPanel) {
+  categoriesPanel.innerHTML = categories.map((category, index) =>
+    `<button data-category="${index}" aria-pressed="${index === activeCategory}">${category}</button>`
+  ).join('');
+  categoriesPanel.addEventListener('click', event => {
+    const button = event.target.closest('[data-category]');
+    if (!button) return;
+    activeCategory = Number(button.dataset.category);
+    for (const option of categoriesPanel.children) option.setAttribute('aria-pressed', String(option === button));
+    renderCatalog();
+  });
+  products.addEventListener('click', event => {
+    const button = event.target.closest('[data-product]');
+    if (button) showProduct(catalog.find(product => product.sku === button.dataset.product));
+  });
+  search.addEventListener('input', renderCatalog);
   renderCatalog();
-});
-products.addEventListener('click', event => {
-  const button = event.target.closest('[data-product]');
-  if (button) showProduct(catalog.find(product => product.sku === button.dataset.product));
-});
-search.addEventListener('input', renderCatalog);
+}
 $('open-cart').addEventListener('click', () => {
   renderCart();
   cart.showModal();
@@ -179,4 +225,3 @@ $('cart-lines').addEventListener('click', event => {
 });
 for (const dialog of [detail, cart]) dialog.querySelector('[data-close]').addEventListener('click', () => dialog.close());
 saveBag();
-renderCatalog();
