@@ -196,3 +196,7 @@ html[dir="ltr"] .campaign { transform: scaleX(-1); }
   from { transform: translateY(7px); }
   to { transform: translateY(0); }
 }
+.featured-section { border-top: 1px solid var(--line); }
+.featured-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .5rem 1rem; margin-bottom: 1.15rem; }
+.featured-heading h2 { margin: 0; }
+@media (min-width: 651px) { .featured-section .products { grid-template-columns: repeat(4, minmax(0, 1fr)); } }

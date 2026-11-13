@@ -116,7 +116,11 @@ function renderCatalog() {
       .some(value => value.toLowerCase().includes(query))
   );
   $('results').textContent = visible.length ? `${visible.length} ${english ? (visible.length === 1 ? "style" : "styles") : "موديل"}` : localize('لم نجد قطعًا مطابقة لبحثكِ.');
-  products.innerHTML = visible.map(product => `
+  renderProducts(products, visible);
+}
+
+function renderProducts(container, items) {
+  container.innerHTML = items.map(product => `
     <article class="product">
       <div class="product-art"><img src="assets/products/${product.sku}.jpg" alt="" width="384" height="384" loading="lazy"></div><p class="illustrative-photo">${photoLabel}</p>
       <div class="product-info">
@@ -212,10 +216,6 @@ if (categoriesPanel) {
     for (const option of categoriesPanel.children) option.setAttribute('aria-pressed', String(option === button));
     renderCatalog();
   });
-  products.addEventListener('click', event => {
-    const button = event.target.closest('[data-product]');
-    if (button) showProduct(catalog.find(product => product.sku === button.dataset.product));
-  });
   search.value = new URLSearchParams(location.search).get('q') ?? '';
   search.addEventListener('input', renderCatalog);
   renderCatalog();
@@ -261,3 +261,18 @@ window.addEventListener('load', () => {
   fonts.href = 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Instrument+Serif&family=Noto+Naskh+Arabic:wght@500;600&display=swap';
   document.head.append(fonts);
 }, { once: true });
+
+const featuredProducts = $('featured-products');
+if (featuredProducts) {
+  const featuredSkus = ['SSBM0001', 'SSBM0008', 'SSBM0011', 'SSBM0014'];
+  renderProducts(featuredProducts, featuredSkus.map(sku => catalog.find(product => product.sku === sku)));
+}
+
+for (const grid of [products, featuredProducts].filter(Boolean)) {
+  grid.addEventListener('click', event => {
+    const button = event.target.closest('[data-product]');
+    if (!button) return;
+    const product = catalog.find(item => item.sku === button.dataset.product);
+    if (product) showProduct(product);
+  });
+}
