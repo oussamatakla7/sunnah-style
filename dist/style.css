@@ -111,3 +111,4 @@ html[dir="ltr"] .campaign { transform: scaleX(-1); }
  .hero-copy, html[dir="ltr"] .hero-copy { padding: 1.7rem 1.25rem 2rem; }
  .hero .intro { margin-inline: auto; }
 }
+.product-art { aspect-ratio: 1; } .product-art img { display: block; } .illustrative-photo { margin: .3rem .1rem .1rem; color: var(--muted); font-size: .75rem; } .detail-photo { display: block; width: min(100%, 220px); height: auto; }

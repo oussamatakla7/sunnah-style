@@ -1,5 +1,6 @@
 const english = document.documentElement.lang === 'en';
 const temporaryPrice = 100;
+const photoLabel = english ? 'Temporary illustration' : 'صورة توضيحية مؤقّتة';
 const money = amount => '$' + amount.toLocaleString('en-US');
 const temporaryLabel = english ? 'Temporary price' : 'سعر مؤقّت';
 const totalLabel = english ? 'Estimated total' : 'المجموع التقديري';
@@ -23,7 +24,6 @@ const translations = {
   "تركواز": "Turquoise",
   "One Size": "One size",
   "ما لقينا موديلات مطابقة.": "No matching styles.",
-  "الصورة قريباً": "Photo coming soon",
   "تفاصيل": "Details for",
   "شوفي التفاصيل": "View details",
   "السعر والتوفّر بيتأكدوا عبر واتساب.": "Price and availability are confirmed on WhatsApp.",
@@ -118,7 +118,7 @@ function renderCatalog() {
   $('results').textContent = visible.length ? `${visible.length} ${english ? (visible.length === 1 ? "style" : "styles") : "موديل"}` : localize('ما لقينا موديلات مطابقة.');
   products.innerHTML = visible.map(product => `
     <article class="product">
-      <div class="product-art" data-cat="${product.category - 1}"><span>${localize('الصورة قريباً')}</span></div>
+      <div class="product-art"><img src="assets/products/${product.sku}.jpg" alt="" width="384" height="384" loading="lazy"></div><p class="illustrative-photo">${photoLabel}</p>
       <div class="product-info">
         <small dir="ltr">${product.sku}</small>
         <h3>${product.name}</h3><p class="item-price"><bdi>${money(temporaryPrice)}</bdi> <small>${temporaryLabel}</small></p>
@@ -133,7 +133,7 @@ function renderCatalog() {
 function showProduct(product) {
   $('detail-body').innerHTML = `
     <p><bdi>${product.sku}</bdi> · ${categories[product.category]}</p>
-    <h2 id="detail-title">${product.name}</h2><p class="item-price"><bdi>${money(temporaryPrice)}</bdi> <small>${temporaryLabel}</small></p>
+    <h2 id="detail-title">${product.name}</h2><img class="detail-photo" src="assets/products/${product.sku}.jpg" alt="" width="384" height="384"><p class="illustrative-photo">${photoLabel}</p><p class="item-price"><bdi>${money(temporaryPrice)}</bdi> <small>${temporaryLabel}</small></p>
     <p>${localize('السعر والتوفّر بيتأكدوا عبر واتساب.')}</p>
     <form id="add-form">
       <label>${localize('اللون')}<select id="color">${product.variants.map(([color], i) => `<option value="${i}">${localize(color[0])}</option>`).join('')}</select></label>
