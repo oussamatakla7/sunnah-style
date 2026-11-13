@@ -30,7 +30,7 @@ function validContent(content) {
         (variant[1] === null || Array.isArray(variant[1]))));
 }
 
-async function updateState(request, bucket) {
+async function updateState(request, bucket, role) {
   if (request.headers.get('origin') !== new URL(request.url).origin ||
       request.headers.get('content-type')?.split(';')[0] !== 'application/json') return json({error: 'origin'}, 403);
   if (Number(request.headers.get('content-length')) > 8_000_000) return json({error: 'limit'}, 413);
@@ -52,13 +52,15 @@ async function updateState(request, bucket) {
   let input;
   try { input = JSON.parse(body + decoder.decode()); }
   catch { return json({error: 'invalid'}, 400); }
-  if (!input || !validContent(input.content) || !['save', 'publish'].includes(input.action)) return json({error: 'invalid'}, 400);
+  if (!input || !['save', 'publish'].includes(input.action)) return json({error: 'invalid'}, 400);
   const {data, etag} = await getState(bucket);
   if (data.revision !== input.revision) return json({error: 'conflict'}, 409);
+  const content = role === 'products' ? {pages:data.draft.pages, products:input.content?.products} : input.content;
+  if (!validContent(content)) return json({error: 'invalid'}, 400);
   const next = {
     revision: data.revision + 1,
-    draft: input.content,
-    live: input.action === 'publish' ? input.content : data.live
+    draft: content,
+    live: input.action === 'publish' ? (role === 'products' ? {pages:data.live.pages, products:content.products} : content) : data.live
   };
   const written = await bucket.put(stateKey, JSON.stringify(next), {
     onlyIf: etag ? {etagMatches: etag} : {etagDoesNotMatch: '*'}
@@ -95,7 +97,8 @@ async function session(request, env) {
   if (!token || !/^[a-f0-9]{64}$/.test(token)) return null;
   const key = await sessionKey(token);
   const entry = await env.BUCKET.head(key);
-  return Number(entry?.customMetadata?.expires) > Date.now() ? key : null;
+  return Number(entry?.customMetadata?.expires) > Date.now()
+    ? {key, role:entry.customMetadata.role === 'products' ? 'products' : 'admin'} : null;
 }
 
 function loginPage(message = '', status = 200) {
@@ -106,8 +109,6 @@ function loginPage(message = '', status = 200) {
 
 async function login(request, env) {
   if (!sameOrigin(request)) return loginPage('أعيدي فتح صفحة تسجيل الدخول.',403);
-  const verifier = env.ADMIN_PASSWORD_VERIFIER;
-  if (!/^[a-f0-9]{32}:[a-f0-9]{64}$/.test(verifier || '')) return loginPage('تسجيل الدخول غير متاح حاليًا.',503);
   if (Number(request.headers.get('content-length')) > 1024) return loginPage('بيانات الدخول غير صالحة.',400);
   if (request.headers.get('content-type')?.split(';')[0] !== 'application/x-www-form-urlencoded') return loginPage('بيانات الدخول غير صالحة.',400);
   const reader = request.body?.getReader();
@@ -126,6 +127,10 @@ async function login(request, env) {
     body += decoder.decode(value,{stream:true});
   }
   const fields = new URLSearchParams(body + decoder.decode());
+  const username = fields.get('username');
+  const role = username === 'sunnah' ? 'products' : 'admin';
+  const verifier = role === 'products' ? env.PRODUCTS_PASSWORD_VERIFIER : env.ADMIN_PASSWORD_VERIFIER;
+  if (!/^[a-f0-9]{32}:[a-f0-9]{64}$/.test(verifier || '')) return loginPage('تسجيل الدخول غير متاح حاليًا.',503);
   const password = fields.get('password') || '';
   const [salt, expected] = verifier.split(':');
   const key = await crypto.subtle.importKey('raw',encode.encode(password),'PBKDF2',false,['deriveBits']);
@@ -134,9 +139,9 @@ async function login(request, env) {
   let mismatch = 0;
   const target = bytes(expected);
   for (let index = 0; index < target.length; index++) mismatch |= target[index] ^ actual[index];
-  if (fields.get('username') !== 'admin' || mismatch !== 0) return loginPage('اسم المستخدم أو كلمة المرور غير صحيحة.',401);
+  if (!['admin','sunnah'].includes(username) || mismatch !== 0) return loginPage('اسم المستخدم أو كلمة المرور غير صحيحة.',401);
   const token = hex(crypto.getRandomValues(new Uint8Array(32)));
-  await env.BUCKET.put(await sessionKey(token),'',{customMetadata:{expires:String(Date.now()+sessionAge*1000)}});
+  await env.BUCKET.put(await sessionKey(token),'',{customMetadata:{role,expires:String(Date.now()+sessionAge*1000)}});
   return redirect('/editor',cookie(token,sessionAge));
 }
 
@@ -153,20 +158,22 @@ export default {
     if (path === '/admin-logout') {
       if (request.method !== 'POST') return json({error:'method'},405);
       if (!sameOrigin(request)) return json({error:'origin'},403);
-      const key = await session(request, env);
-      if (key) await env.BUCKET.delete(key);
+      const current = await session(request, env);
+      if (current) await env.BUCKET.delete(current.key);
       return redirect(loginPath,cookie('',0));
     }
     const isAdmin = adminPaths.has(path);
     if (isAdmin) {
-      if (!await session(request, env)) {
+      const current = await session(request, env);
+      if (!current) {
         if (path === '/editor' || path === '/editor.html') return redirect(loginPath);
         return json({error:'login'},401);
       }
-      if (path === '/api/admin/state' && request.method === 'PUT') return updateState(request, env.BUCKET);
+      if (path === '/api/admin/state' && request.method === 'PUT') return updateState(request, env.BUCKET, current.role);
       if (path === '/api/admin/state' && request.method === 'GET') {
         const {data} = await getState(env.BUCKET);
-        return json({revision: data.revision, draft: data.draft, publishedPages: Object.keys(data.live.pages)});
+        if (current.role === 'products') return json({revision:data.revision, role:current.role, draft:{pages:{}, products:data.draft.products}});
+        return json({revision: data.revision, role:current.role, draft: data.draft, publishedPages: Object.keys(data.live.pages)});
       }
     }
     if (!['GET', 'HEAD'].includes(request.method)) return json({error: 'method'}, 405);

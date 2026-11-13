@@ -63,7 +63,9 @@ function upload(file, callback) {
 }
 
 let view = 'pages';
+let productsOnly = false;
 function showView(next) {
+  if (productsOnly && !next.startsWith('product')) return;
   view = next;
   for (const id of ['pages','products','layout','menu-editor','page-editor','product-editor']) $(id).hidden = id !== next;
   for (const button of document.querySelectorAll('.side [data-tab]')) {
@@ -568,10 +570,15 @@ async function loadState() {
   if (!response.ok) throw Error();
   const state = await response.json();
   revision = state.revision;
+  productsOnly = state.role === 'products';
+  if (productsOnly) {
+    for (const button of document.querySelectorAll('.side [data-tab]:not([data-tab=products])')) button.hidden = true;
+    showView('products');
+  } else showView('pages');
   pages = state.draft.pages;
   products = state.draft.products ?? window.storeCatalog;
   publishedPages = state.publishedPages || [];
-  listPages();
+  if (!productsOnly) listPages();
   listProducts();
   $('new-page').disabled = false;
   $('save').disabled = $('publish').disabled = false;
@@ -596,7 +603,7 @@ async function commit(action) {
     }
     if (!response.ok) throw Error();
     revision = (await response.json()).revision;
-    if (action === 'publish') { publishedPages = Object.keys(pages); listPages(); }
+    if (action === 'publish' && !productsOnly) { publishedPages = Object.keys(pages); listPages(); }
     status(action === 'publish' ? 'نُشرت التعديلات على المتجر.' : 'حُفظت المسودة.');
   } catch { status('تعذّر حفظ التعديلات. تحقّقي من تسجيل الدخول وحاولي مجددًا.'); }
   finally { $('save').disabled = $('publish').disabled = false; }
