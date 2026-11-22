@@ -792,6 +792,7 @@ async function loadState() {
   if (!productsOnly) listPages();
   listProducts();
   $('new-page').disabled = false;
+  $('export-products').disabled = $('import-products').disabled = false;
   $('save').disabled = $('publish').disabled = false;
 }
 async function commit(action) {
@@ -827,4 +828,46 @@ async function commit(action) {
 }
 $('save').onclick = () => commit('save');
 $('publish').onclick = () => commit('publish');
+let excelModule;
+function loadExcelModule() {
+  if (!excelModule) excelModule = new Promise((resolve,reject) => {
+    const script = document.createElement('script');
+    script.src = '/assets/product-excel.js';
+    script.onload = () => resolve(window.productExcel);
+    script.onerror = () => { excelModule = null; script.remove(); reject(Error('تعذّر تحميل أدوات Excel.')); };
+    document.head.append(script);
+  });
+  return excelModule;
+}
+$('export-products').onclick = async () => {
+  $('export-products').disabled = true;
+  try {
+    const excel = await loadExcelModule();
+    const buffer = await excel.exportProducts(products);
+    const url = URL.createObjectURL(new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'sunnah-style-products.xlsx';
+    link.click();
+    setTimeout(()=>URL.revokeObjectURL(url),10000);
+    status('تمّ تصدير المنتجات إلى Excel.');
+  } catch (error) { status(error.message || 'تعذّر التصدير.'); }
+  finally { $('export-products').disabled = false; }
+};
+$('import-products').onclick = () => $('excel-file').click();
+$('excel-file').onchange = async event => {
+  const file = event.target.files[0];
+  if (!file) return;
+  $('import-products').disabled = true;
+  try {
+    if (!/\.xlsx$/i.test(file.name) || file.size > 16000000) throw Error('اختاري ملف xlsx بحجم أقل من 16 MB.');
+    const excel = await loadExcelModule();
+    const result = await excel.importProducts(await file.arrayBuffer(),products);
+    if (!confirm('استيراد ' + result.count + ' منتج للمراجعة قبل الحفظ والنشر؟')) return;
+    products = result.products;
+    listProducts();
+    status('تمّ استيراد ' + result.count + ' منتج. احفظي المسودّة أو انشري التعديلات على المتجر.');
+  } catch (error) { status(error.message || 'تعذّر الاستيراد.'); }
+  finally { $('import-products').disabled = false; event.target.value = ''; }
+};
 loadState().catch(() => status('تعذّر تحميل المسودة. أعيدي فتح اللوحة.'));

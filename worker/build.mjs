@@ -1,5 +1,8 @@
 import {readFileSync,writeFileSync,readdirSync,mkdirSync} from 'node:fs';
 import {extname} from 'node:path';
+import {buildSync} from 'esbuild';
+
+buildSync({entryPoints:['worker/product-excel.mjs'],outfile:'dist/assets/product-excel.js',bundle:true,minify:true,platform:'browser'});
 
 const types = {'.html':'text/html; charset=utf-8','.js':'application/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.jpg':'image/jpeg'};
 const assets = {};
