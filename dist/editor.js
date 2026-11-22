@@ -573,7 +573,7 @@ function applyProduct() {
 $('product-form').noValidate = true;
 $('product-form').onsubmit = event => {
   event.preventDefault();
-  commit('save');
+  commit('publish');
 };
 $('delete').onclick = () => {
   if (!currentSku || !confirm('حذف القطعة من المسودة؟')) return;
