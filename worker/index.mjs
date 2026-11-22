@@ -280,7 +280,7 @@ function convexStore(env) {
       const response = await call('GET',{key});
       if (response.status === 404) return null;
       if (!response.ok) throw Error('Convex read failed');
-      return {etag:response.headers.get('etag'),json:() => response.json()};
+      return {etag:response.headers.get('X-Store-Revision') || response.headers.get('etag'),json:() => response.json()};
     },
     async put(key, body, options) {
       const conditional = {};

@@ -31,12 +31,14 @@ for (const method of ["GET", "PUT", "DELETE"] as const) {
         if (!record) return new Response(null, { status: 404 });
         const result = await fetch(record.url);
         if (!result.ok) return new Response(null, { status: 503 });
-        return new Response(result.body, { headers: { ETag: record.etag, "Content-Type": "application/json" } });
+        return new Response(result.body, { headers: { ETag: record.etag, "X-Store-Revision": record.etag, "Content-Type": "application/json" } });
       }
       const blob = await ctx.storage.store(await request.blob());
       const etag = crypto.randomUUID();
       const written = await ctx.runMutation(internal.records.write, {
-        key, blob, etag, match: request.headers.get("If-Match") ?? undefined,
+        key, blob, etag, match: request.headers.has("If-Match")
+          ? request.headers.get("If-Match")!.match(/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}/)?.[0] ?? "invalid"
+          : undefined,
         absent: request.headers.get("If-None-Match") === "*",
       });
       return new Response(null, { status: written ? 204 : 412 });
