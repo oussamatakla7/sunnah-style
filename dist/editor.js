@@ -35,7 +35,21 @@ mobilePane('preview');
 function labelCells(row, labels) {
   labels.forEach((label, index) => { row.cells[index].dataset.label = label; });
 }
-const status = message => { $('status').textContent = message; };
+const status = message => {
+  $('status').textContent = message;
+  const feedback = $('product-feedback');
+  if (feedback) feedback.textContent = message;
+};
+function validateProduct() {
+  const invalid = $('product-form').querySelector(':invalid');
+  if (!invalid) return true;
+  const label = invalid.closest('label')?.firstChild.textContent.trim() || 'بيانات المنتج';
+  status('راجعي خانة «' + label + '» قبل الحفظ.');
+  $('status').scrollIntoView({block:'nearest',behavior:'smooth'});
+  invalid.focus();
+  invalid.reportValidity();
+  return false;
+}
 function upload(file, callback) {
   if (!file || !/^image\/(png|jpeg|webp|gif)$/.test(file.type)) {
     status('اختاري صورة JPEG أو PNG أو WebP أو GIF.');
@@ -535,8 +549,8 @@ $('image').onchange = event => upload(event.target.files[0], data => {
   $('thumb').src = data;
   $('thumb').hidden = false;
 });
-$('product-form').onsubmit = event => {
-  event.preventDefault();
+function applyProduct() {
+  if (!validateProduct()) return false;
   const sku = $('sku').value.trim().toUpperCase();
   if (sku !== currentSku && products.some(p => p.sku === sku)) return status('رمز القطعة مستخدم.');
   if (!image || !$('variants').children.length) return status('أضيفي صورة ولونًا واحدًا على الأقل.');
@@ -555,6 +569,11 @@ $('product-form').onsubmit = event => {
   listProducts();
   loadProduct(sku);
   return true;
+}
+$('product-form').noValidate = true;
+$('product-form').onsubmit = event => {
+  event.preventDefault();
+  commit('save');
 };
 $('delete').onclick = () => {
   if (!currentSku || !confirm('حذف القطعة من المسودة؟')) return;
@@ -778,8 +797,9 @@ async function loadState() {
 async function commit(action) {
   if (view === 'page-editor' && !applyInspector()) return;
   if (view === 'menu-editor' && !saveMenu()) return;
-  if (view === 'product-editor' && (!$('product-form').reportValidity() || !$('product-form').onsubmit(new Event('submit')))) return;
+  if (view === 'product-editor' && !applyProduct()) return;
   $('save').disabled = $('publish').disabled = true;
+  status(action === 'publish' ? 'جارٍ نشر المنتجات…' : 'جارٍ حفظ المسودّة…');
   try {
     const response = await fetch('/api/admin/state', {
       method: 'PUT',
@@ -792,6 +812,10 @@ async function commit(action) {
     }
     if (response.status === 413) {
       status('حجم التعديلات كبير. صغّري الصور وحاولي مجددًا.');
+      return;
+    }
+    if (response.status === 400) {
+      status('تعذّر الحفظ. تأكّدي من رمز القطعة بالأحرف الإنجليزية والأرقام، والسعر والكمية والألوان.');
       return;
     }
     if (!response.ok) throw Error();
