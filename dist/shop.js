@@ -1,8 +1,8 @@
-const english = document.documentElement.lang === 'en';
+let english = document.documentElement.lang === 'en';
 const sizeLabel = value => value === 'One Size' ? (english ? 'One size' : 'قياس موحّد') : localize(String(value));
 const escapeHtml = value => String(value ?? "").replace(/[&<>"\x27]/g, char => "&#" + char.charCodeAt(0) + ";");
 const money = amount => '$' + amount.toLocaleString('en-US');
-const totalLabel = english ? 'Estimated total' : 'المجموع التقديري';
+let totalLabel = english ? 'Estimated total' : 'المجموع التقديري';
 const translations = {
   "الكل": "All",
   "فساتين سهرة": "Evening dresses",
@@ -43,8 +43,8 @@ const translations = {
 };
 const localize = text => english ? window.storeLanguage?.translate(text) ?? translations[text] ?? text : text;
 const englishNames = ["Plain zip dress","Designed zip dress","Orange evening dress","Evening dress with bodice detail","Evening dress without chiffon","Chiffon evening dress","Plain dress with bodice detail","Flared chiffon dress","Loose everyday dress","Bow dress","Button-front dress","Button dress with detailing","Gathered dress with sleeves","Sport skirt and jacket set"];
-const categories = ['الكل', 'فساتين سهرة', 'فساتين يومية', 'أطقم رياضية', 'حقائب', 'تشكيلة الشتاء'].map(localize);
-const catalog = window.storeCatalog.map(product => english ? {...product, name:product.nameEn || localize(product.name), description:product.descriptionEn || localize(product.description)} : product);
+let categories = ['الكل', 'فساتين سهرة', 'فساتين يومية', 'أطقم رياضية', 'حقائب', 'تشكيلة الشتاء'].map(localize);
+let catalog = window.storeCatalog.map(product => english ? {...product, name:product.nameEn || localize(product.name), description:product.descriptionEn || localize(product.description)} : product);
 const $ = id => document.getElementById(id);
 const products = $('products');
 const categoriesPanel = $('categories');
@@ -387,3 +387,14 @@ if (document.querySelector('.product-page')) {
   if (product) showProduct(product);
   else $('detail-body').textContent = 'هالقطعة غير متوفّرة. تصفّحي القطع الموجودة بالمتجر.';
 }
+
+window.storeApplyLanguage = lang => {
+  english = lang === 'en';
+  totalLabel = english ? 'Estimated total' : 'المجموع التقديري';
+  catalog = window.storeCatalog.map(product => english ? {...product,name:product.nameEn || localize(product.name),description:product.descriptionEn || localize(product.description)} : product);
+  categories = ['الكل','فساتين سهرة','فساتين يومية','أطقم رياضية','حقائب','تشكيلة الشتاء'].map(localize);
+  if(categoriesPanel){for(const button of categoriesPanel.children)button.textContent=categories[Number(button.dataset.category)];renderCatalog();}
+  if($('featured-products')) renderProducts($('featured-products'),catalog.filter(p=>['SSBM0001','SSBM0008','SSBM0011','SSBM0014'].includes(p.sku)).slice(0,4));
+  if(document.querySelector('.product-page')){const p=catalog.find(p=>p.sku===new URLSearchParams(location.search).get('sku'));if(p)showProduct(p);}
+  renderCart();
+};
