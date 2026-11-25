@@ -22,7 +22,7 @@ function validContent(content) {
     new Set(content.products.map(item => item?.sku)).size === content.products.length &&
     content.products.every(item => item && /^[A-Z0-9_-]{1,80}$/.test(item.sku) &&
       typeof item.name === 'string' && item.name.trim() && typeof item.description === 'string' &&
-      [1, 2, 3].includes(item.category) && Number.isFinite(item.price) && item.price >= 0 &&
+      [1, 2, 3, 4].includes(item.category) && Number.isFinite(item.price) && item.price >= 0 &&
       (item.quantity === null || (Number.isSafeInteger(item.quantity) && item.quantity >= 0)) &&
       typeof item.image === 'string' && Array.isArray(item.variants) && item.variants.length > 0 &&
       item.variants.every(variant => Array.isArray(variant) && Array.isArray(variant[0]) &&

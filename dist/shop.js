@@ -43,7 +43,7 @@ const translations = {
 };
 const localize = text => english ? translations[text] ?? text : text;
 const englishNames = ["Plain zip dress","Designed zip dress","Orange evening dress","Evening dress with bodice detail","Evening dress without chiffon","Chiffon evening dress","Plain dress with bodice detail","Flared chiffon dress","Loose everyday dress","Bow dress","Button-front dress","Button dress with detailing","Gathered dress with sleeves","Sport skirt and jacket set"];
-const categories = ['الكل', 'فساتين سهرة', 'فساتين يومية', 'أطقم رياضية'].map(localize);
+const categories = ['الكل', 'فساتين سهرة', 'فساتين يومية', 'أطقم رياضية', 'حقائب'].map(localize);
 const catalog = window.storeCatalog;
 const $ = id => document.getElementById(id);
 const products = $('products');

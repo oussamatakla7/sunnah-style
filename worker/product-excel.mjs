@@ -2,7 +2,7 @@ import ExcelJS from 'exceljs';
 
 const productHeaders = ['رمز القطعة','الاسم','الفئة','الوصف','السعر بالدولار','الكمية','سعر مؤقت','الصورة'];
 const variantHeaders = ['رمز القطعة','اسم اللون','درجة اللون','القياسات','صورة اللون'];
-const categories = ['فساتين سهرة','فساتين يومية','أطقم رياضية'];
+const categories = ['فساتين سهرة','فساتين يومية','أطقم رياضية','حقائب'];
 
 export async function exportProducts(products) {
   const book = new ExcelJS.Workbook();
@@ -74,7 +74,7 @@ export async function importProducts(buffer, existing) {
     const quantity = value(row,6) === '' ? null : Number(value(row,6));
     const category = categories.indexOf(value(row,3)) + 1 || Number(value(row,3));
     if (!/^[A-Z0-9_-]{1,80}$/.test(sku) || incoming.has(sku) || !value(row,2) || !value(row,5) ||
-        ![1,2,3].includes(category) || !Number.isFinite(price) || price < 0 ||
+        ![1,2,3,4].includes(category) || !Number.isFinite(price) || price < 0 ||
         (quantity !== null && (!Number.isSafeInteger(quantity) || quantity < 0)) ||
         !['نعم','لا'].includes(value(row,7))) throw Error('راجعي بيانات المنتج بالسطر ' + index + '.');
     const image = imageValue(value(row,8));
