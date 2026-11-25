@@ -392,7 +392,10 @@ export default {
         return rewrite.transform(response);
       }
       if (path === '/catalog.js' && data.live.products) return new Response(
-        'window.storeCatalog = ' + JSON.stringify(data.live.products) + ';', {
+        'window.storeCatalog = ' + JSON.stringify(data.live.products.map(product => {
+          const versionImage = src => typeof src === 'string' && !src.startsWith('data:') && src ? src + (src.includes('?') ? '&' : '?') + 'imagev=150k' : src;
+          return {...product,image:versionImage(product.image),variants:product.variants.map(variant => [variant[0],variant[1],versionImage(variant[2] || '')])};
+        })) + ';', {
           headers: {...noCache, 'Content-Type': 'application/javascript; charset=utf-8'}
         });
       return asset(path);

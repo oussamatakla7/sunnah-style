@@ -5,12 +5,15 @@ let stored;try{stored=localStorage.getItem('sunnah-language')}catch{}
 const lang=params.get('lang')==='en'?'en':params.get('lang')==='ar'?'ar':stored==='en'?'en':'ar';
 try{localStorage.setItem('sunnah-language',lang)}catch{}
 document.documentElement.lang=lang;document.documentElement.dir=lang==='en'?'ltr':'rtl';
+Object.assign(dict,{'زهرة عطرة':'Floral pink','ازرق':'Blue','ازرق سماوي':'Sky blue'});
 const sorted=Object.keys(dict).sort((a,b)=>b.length-a.length);
 function translate(value){if(!value)return value;if(dict[value])return dict[value];if(!/[\u0600-\u06ff]/.test(value))return value;let out=value;for(const key of sorted)out=out.split(key).join(dict[key]);return out;}
 window.storeLanguage={lang,translate};
 const attrs=['aria-label','placeholder','title','alt'];
 function visit(root){if(lang!=='en')return;if(root.nodeType===3){if(!root.parentElement?.closest('script,style,textarea,input,[data-language-switch]')){const next=translate(root.nodeValue);if(next!==root.nodeValue)root.nodeValue=next;}return;}if(root.nodeType!==1&&root.nodeType!==9)return;if(root.nodeType===1){if(root.matches('script,style,[data-language-switch]'))return;for(const attr of attrs){const v=root.getAttribute(attr);if(v){const next=translate(v);if(next!==v)root.setAttribute(attr,next);}}}for(const node of root.childNodes)visit(node);}
 function init(){
+const categories=document.querySelector('.category-links');
+if(categories&&!categories.querySelector('[href*="category=5"]')){const a=document.createElement('a');a.href='shop.html?category=5';const image=document.createElement('img');image.src='/assets/products/SSBM0018-new-0.jpg';image.alt='';image.loading='lazy';const label=document.createElement('div');label.className='category-label';label.textContent='تشكيلة الشتاء';a.append(image,label);categories.append(a);}
 const nav=document.querySelector('header nav');
 if(nav&&!nav.querySelector('[data-language-switch]')){const link=document.createElement('a');link.dataset.languageSwitch='';const url=new URL(location.href);url.searchParams.set('lang',lang==='en'?'ar':'en');link.href=url.pathname+url.search;link.lang=lang==='en'?'ar':'en';link.textContent=lang==='en'?'العربية':'English';nav.append(link);}
 visit(document.body);if(lang==='en')document.title=translate(document.title);
