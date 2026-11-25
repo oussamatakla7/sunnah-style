@@ -2,3 +2,5 @@ html[lang=en]{direction:ltr}html[lang=en] body{font-family:Arial,Helvetica,sans-
 @media(min-width:921px){.category-links{grid-template-columns:repeat(4,minmax(0,1fr))}}
 
 header.bar nav{align-items:center}header.bar nav a,header.bar nav [data-language-switch]{display:flex;align-items:center;justify-content:center;min-height:44px;line-height:1.5;padding-block:.3rem}header.bar nav [data-language-switch]{font:inherit;line-height:1.5}@media(max-width:650px){header.bar nav a,header.bar nav [data-language-switch]{justify-content:flex-start}}
+
+@media(max-width:920px){.category-links{grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.category-links .category-label{overflow-wrap:anywhere}}
