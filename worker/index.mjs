@@ -382,7 +382,7 @@ export default {
           headers: {...noCache, 'Content-Type': 'text/html; charset=utf-8'}
         }) : asset(custom ? path : '/' + page + '.html');
         if (!response.ok) return response;
-        const rewrite = new HTMLRewriter().on('head', {element(node) { node.prepend('<script src="/assets/store-language.js?v=3"></script><link rel="stylesheet" href="/assets/store-language.css?v=7">', {html:true}); }});
+        const rewrite = new HTMLRewriter().on('head', {element(node) { node.prepend('<script src="/assets/store-language.js?v=3"></script><link rel="stylesheet" href="/assets/store-language.css?v=8">', {html:true}); }});
         for (const part of ['header', 'footer']) {
           const fragment = pages['layout-' + part]?.slice('<!doctype html>'.length);
           if (fragment) rewrite.on(part === 'header' ? 'body > header.bar' : 'body > footer', {

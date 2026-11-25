@@ -5,4 +5,4 @@ header.bar nav{align-items:center}header.bar nav a,header.bar nav [data-language
 
 @media(max-width:920px){.home-sections .category-links{grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.category-links .category-label{overflow-wrap:anywhere}}
 
-html[lang=en] header.bar{direction:rtl}html[lang=en] header.bar nav{direction:rtl}html[lang=en] header.bar nav a{direction:ltr}
+html[lang=en] header.bar{direction:ltr}html[lang=en] header.bar nav{direction:ltr}html[lang=en] header.bar nav a{direction:ltr}
