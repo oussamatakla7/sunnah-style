@@ -55,11 +55,13 @@ function upload(file, callback) {
     status('اختاري صورة JPEG أو PNG أو WebP أو GIF.');
     return;
   }
+  if (file.size > 32 * 1024 * 1024) return status('اختاري صورة بحجم 32 MB أو أقل.');
+  status('جارٍ تجهيز الصورة وضغطها تلقائيًا…');
   const reader = new FileReader();
   reader.onload = () => {
     const img = new Image();
     img.onload = () => {
-      const scale = Math.min(1, 1200 / Math.max(img.width, img.height));
+      const scale = Math.min(1, 1600 / Math.max(img.width, img.height));
       const canvas = document.createElement('canvas');
       canvas.width = Math.round(img.width * scale);
       canvas.height = Math.round(img.height * scale);
@@ -67,7 +69,31 @@ function upload(file, callback) {
       ctx.fillStyle = '#fff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      callback(canvas.toDataURL('image/jpeg', .82));
+      let quality = .86;
+      let data = canvas.toDataURL('image/jpeg', quality);
+      while (data.length > 200000 && quality > .5) {
+        quality -= .08;
+        data = canvas.toDataURL('image/jpeg', quality);
+      }
+      if (data.length > 200000) {
+        const smaller = document.createElement('canvas');
+        const ratio = Math.sqrt(200000 / data.length) * .95;
+        smaller.width = Math.max(1, Math.round(canvas.width * ratio));
+        smaller.height = Math.max(1, Math.round(canvas.height * ratio));
+        smaller.getContext('2d').drawImage(canvas, 0, 0, smaller.width, smaller.height);
+        data = smaller.toDataURL('image/jpeg', .78);
+      }
+      while (Math.ceil((data.length - data.indexOf(',') - 1) * 3 / 4) > 150000) {
+        const next = document.createElement('canvas');
+        next.width = Math.max(1, Math.floor(canvas.width * .8));
+        next.height = Math.max(1, Math.floor(canvas.height * .8));
+        next.getContext('2d').drawImage(canvas, 0, 0, next.width, next.height);
+        canvas.width = next.width; canvas.height = next.height;
+        canvas.getContext('2d').drawImage(next, 0, 0);
+        data = canvas.toDataURL('image/jpeg', .78);
+      }
+      callback(data);
+      status('الصورة جاهزة. احفظي المنتج لنشرها على المتجر.');
     };
     img.onerror = () => status('تعذّر قراءة الصورة.');
     img.src = reader.result;
@@ -498,7 +524,7 @@ function addVariant(variant = [['','#242323'],null,'']) {
 function loadProduct(sku) {
   currentSku = sku;
   const item = products.find(p => p.sku === sku);
-  for (const id of ['sku','name','description','price','quantity']) $(id).value = item?.[id] ?? '';
+  for (const id of ['sku','name','nameEn','description','descriptionEn','price','quantity']) $(id).value = item?.[id] ?? '';
   $('sku').readOnly = Boolean(item);
   $('category').value = item?.category ?? 1;
   $('temporary').checked = Boolean(item?.temporary);
@@ -560,7 +586,7 @@ function applyProduct() {
     return [[val('color-name'),val('color-value')],sizes.length ? sizes : null,row.querySelector('img').getAttribute('src') || ''];
   });
   if (variants.some(([,sizes]) => sizes?.some(size => size !== 'One Size' && !/^[0-9٠-٩۰-۹]+$/.test(size)))) return status('اكتبي القياسات بالأرقام أو «قياس موحّد».');
-  const product = {sku,name:$('name').value.trim(),category:Number($('category').value),description:$('description').value.trim(),price:Number($('price').value),quantity:$('quantity').value === '' ? null : Number($('quantity').value),temporary:$('temporary').checked,image,variants};
+  const product = {sku,nameEn:$('nameEn').value.trim(),descriptionEn:$('descriptionEn').value.trim(),name:$('name').value.trim(),category:Number($('category').value),description:$('description').value.trim(),price:Number($('price').value),quantity:$('quantity').value === '' ? null : Number($('quantity').value),temporary:$('temporary').checked,image,variants};
   if (!product.name || variants.some(([color]) => !color[0])) return status('أدخلي اسم القطعة وأسماء الألوان.');
   const index = products.findIndex(p => p.sku === currentSku);
   if (index < 0) products.push(product);
@@ -812,7 +838,7 @@ async function commit(action) {
       return;
     }
     if (response.status === 413) {
-      status('حجم التعديلات كبير. صغّري الصور وحاولي مجددًا.');
+      status('تجاوزت التعديلات حدّ الحفظ البالغ 32 MB. احفظي الصور على دفعات أصغر.');
       return;
     }
     if (response.status === 400) {

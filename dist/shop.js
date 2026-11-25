@@ -1,5 +1,5 @@
 const english = document.documentElement.lang === 'en';
-const sizeLabel = value => value === "One Size" ? "قياس موحّد" : String(value);
+const sizeLabel = value => value === 'One Size' ? (english ? 'One size' : 'قياس موحّد') : localize(String(value));
 const escapeHtml = value => String(value ?? "").replace(/[&<>"\x27]/g, char => "&#" + char.charCodeAt(0) + ";");
 const money = amount => '$' + amount.toLocaleString('en-US');
 const totalLabel = english ? 'Estimated total' : 'المجموع التقديري';
@@ -41,10 +41,10 @@ const translations = {
   "نؤكّد السعر والتوفّر عبر واتساب قبل الدفع.": "We confirm the price and availability on WhatsApp before payment.",
   "يُحدّد عبر واتساب": "Confirm on WhatsApp"
 };
-const localize = text => english ? translations[text] ?? text : text;
+const localize = text => english ? window.storeLanguage?.translate(text) ?? translations[text] ?? text : text;
 const englishNames = ["Plain zip dress","Designed zip dress","Orange evening dress","Evening dress with bodice detail","Evening dress without chiffon","Chiffon evening dress","Plain dress with bodice detail","Flared chiffon dress","Loose everyday dress","Bow dress","Button-front dress","Button dress with detailing","Gathered dress with sleeves","Sport skirt and jacket set"];
-const categories = ['الكل', 'فساتين سهرة', 'فساتين يومية', 'أطقم رياضية', 'حقائب'].map(localize);
-const catalog = window.storeCatalog;
+const categories = ['الكل', 'فساتين سهرة', 'فساتين يومية', 'أطقم رياضية', 'حقائب', 'تشكيلة الشتاء'].map(localize);
+const catalog = window.storeCatalog.map(product => english ? {...product, name:product.nameEn || localize(product.name), description:product.descriptionEn || localize(product.description)} : product);
 const $ = id => document.getElementById(id);
 const products = $('products');
 const categoriesPanel = $('categories');
@@ -148,15 +148,15 @@ async function sendWhatsAppOrder(form, items) {
     if (!response.ok) throw Error();
     const order = await response.json();
     const orderLines = order.items.flatMap(item => [
-      `• ${item.name} (${item.sku})`,
-      `  اللون: ${localize(item.color)} | القياس: ${sizeLabel(item.size)} | الكمية: ${item.quantity}`,
+      `• ${localize(item.name)} (${item.sku})`,
+      `  ${localize('اللون')}: ${localize(item.color)} | ${localize('القياس')}: ${sizeLabel(item.size)} | ${english ? 'Quantity' : 'الكمية'}: ${item.quantity}`,
       `  ${money(item.unitCents / 100)} × ${item.quantity} = ${money(item.unitCents * item.quantity / 100)}`
     ]);
     const deliveryLines = ['معلومات التوصيل', 'الاسم: ' + delivery.customer, 'الهاتف: ' + delivery.phone,
       'المنطقة: ' + delivery.area, 'العنوان: ' + delivery.address];
-    if (delivery.notes) deliveryLines.push('ملاحظات: ' + delivery.notes);
-    const message = ['السلام عليكم فريق سنّة ستايل، حابّة أطلب هيدا الأوردر.',
-      'رقم الطلب: ' + order.id, '', 'تفاصيل الطلب', ...orderLines, totalLabel + ': ' + money(order.cents / 100),
+    if (delivery.notes) deliveryLines.push((english ? 'Notes: ' : 'ملاحظات: ') + delivery.notes);
+    const message = [english ? 'Assalamu alaikum Sunnah Style team, I would like to place this order.' : 'السلام عليكم فريق سنّة ستايل، حابّة أطلب هيدا الأوردر.',
+      (english ? 'Order number: ' : 'رقم الطلب: ') + order.id, '', english ? 'Order details' : 'تفاصيل الطلب', ...orderLines, totalLabel + ': ' + money(order.cents / 100),
       '', ...deliveryLines].join('\n');
     const link = document.createElement('a');
     link.href = whatsapp + '?text=' + encodeURIComponent(message);
@@ -244,7 +244,7 @@ function showProduct(product) {
     if (!size || product.quantity === 0) return;
     const inBag = bag.filter(line => line.sku === product.sku).reduce((sum, line) => sum + line.quantity, 0);
     if (product.quantity !== null && inBag >= product.quantity) {
-      alert("الكمية المطلوبة غير متوفّرة.");
+      alert(localize("الكمية المطلوبة غير متوفّرة."));
       return;
     }
     const item = bag.find(line => line.sku === product.sku && line.color === colorIndex && line.size === size.value);

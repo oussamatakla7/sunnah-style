@@ -22,7 +22,7 @@ function validContent(content) {
     new Set(content.products.map(item => item?.sku)).size === content.products.length &&
     content.products.every(item => item && /^[A-Z0-9_-]{1,80}$/.test(item.sku) &&
       typeof item.name === 'string' && item.name.trim() && typeof item.description === 'string' &&
-      [1, 2, 3, 4].includes(item.category) && Number.isFinite(item.price) && item.price >= 0 &&
+      [1, 2, 3, 4, 5].includes(item.category) && Number.isFinite(item.price) && item.price >= 0 &&
       (item.quantity === null || (Number.isSafeInteger(item.quantity) && item.quantity >= 0)) &&
       typeof item.image === 'string' && Array.isArray(item.variants) && item.variants.length > 0 &&
       item.variants.every(variant => Array.isArray(variant) && Array.isArray(variant[0]) &&
@@ -33,7 +33,7 @@ function validContent(content) {
 async function updateState(request, bucket, role) {
   if (request.headers.get('origin') !== new URL(request.url).origin ||
       request.headers.get('content-type')?.split(';')[0] !== 'application/json') return json({error: 'origin'}, 403);
-  if (Number(request.headers.get('content-length')) > 8_000_000) return json({error: 'limit'}, 413);
+  if (Number(request.headers.get('content-length')) > 32_000_000) return json({error: 'limit'}, 413);
   const reader = request.body?.getReader();
   if (!reader) return json({error: 'invalid'}, 400);
   const decoder = new TextDecoder();
@@ -43,7 +43,7 @@ async function updateState(request, bucket, role) {
     const {done, value} = await reader.read();
     if (done) break;
     bytes += value.byteLength;
-    if (bytes > 8_000_000) {
+    if (bytes > 32_000_000) {
       await reader.cancel();
       return json({error: 'limit'}, 413);
     }
@@ -381,8 +381,8 @@ export default {
         const response = pages[page] ? new Response(pages[page], {
           headers: {...noCache, 'Content-Type': 'text/html; charset=utf-8'}
         }) : asset(custom ? path : '/' + page + '.html');
-        if (!response.ok || (!pages['layout-header'] && !pages['layout-footer'])) return response;
-        const rewrite = new HTMLRewriter();
+        if (!response.ok) return response;
+        const rewrite = new HTMLRewriter().on('head', {element(node) { node.prepend('<script src="/assets/store-language.js?v=1"></script><link rel="stylesheet" href="/assets/store-language.css?v=1">', {html:true}); }});
         for (const part of ['header', 'footer']) {
           const fragment = pages['layout-' + part]?.slice('<!doctype html>'.length);
           if (fragment) rewrite.on(part === 'header' ? 'body > header.bar' : 'body > footer', {
